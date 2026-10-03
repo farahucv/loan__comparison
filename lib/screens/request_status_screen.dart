@@ -9,7 +9,8 @@ class RequestStatusScreen extends StatefulWidget {
   const RequestStatusScreen({super.key});
 
   @override
-  State<RequestStatusScreen> createState() => _RequestStatusScreenState();
+  State<RequestStatusScreen> createState() =>
+      _RequestStatusScreenState();
 }
 
 class _RequestStatusScreenState extends State<RequestStatusScreen> {
@@ -18,17 +19,41 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
   List<BorrowerRequestData> requests = [];
 
   bool isLoading = true;
-
   String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-
     _loadRequests();
   }
 
+  String? _bankLogo(String bankName) {
+    final name = bankName.toLowerCase().trim();
+
+    if (name.contains('rajhi')) {
+      return 'assets/images/Alrajhi-Bank-Logo.png';
+    }
+
+    if (name.contains('riyad')) {
+      return 'assets/images/Riyad-Bank-Logo.png';
+    }
+
+    if (name.contains('bilad')) {
+      return 'assets/images/Albilad-Bank-Logo.png';
+    }
+
+    if (name.contains('national') ||
+        name.contains('snb') ||
+        name.contains('ahli')) {
+      return 'assets/images/Saudi_National_Bank_Logo.png';
+    }
+
+    return null;
+  }
+
   Future<void> _loadRequests() async {
+    if (!mounted) return;
+
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -58,10 +83,15 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     return BorrowerShell(
       active: 2,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 38),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 38,
+        ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 850),
+            constraints: const BoxConstraints(
+              maxWidth: 850,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -69,27 +99,34 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
                         children: [
                           AppText(
                             'Request Status',
-                            style: white(28, w: FontWeight.w900),
+                            style: white(
+                              28,
+                              w: FontWeight.w900,
+                            ),
                           ),
-
                           const SizedBox(height: 5),
-
                           AppText(
                             'Track your submitted loan requests.',
-                            style: white(12, c: Colors.white54),
+                            style: white(
+                              12,
+                              c: Colors.white54,
+                            ),
                           ),
                         ],
                       ),
                     ),
-
                     IconButton(
                       tooltip: 'Refresh',
                       onPressed: _loadRequests,
-                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      icon: const Icon(
+                        Icons.refresh,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -122,25 +159,28 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         decoration: panel(),
         child: Column(
           children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent, size: 45),
-
+            const Icon(
+              Icons.error_outline,
+              color: Colors.redAccent,
+              size: 45,
+            ),
             const SizedBox(height: 12),
-
             AppText(
               'Unable to load requests.',
-              style: white(17, w: FontWeight.bold),
+              style: white(
+                17,
+                w: FontWeight.bold,
+              ),
             ),
-
             const SizedBox(height: 8),
-
             Text(
               errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54),
+              style: const TextStyle(
+                color: Colors.white54,
+              ),
             ),
-
             const SizedBox(height: 15),
-
             ElevatedButton(
               onPressed: _loadRequests,
               child: const Text('Try Again'),
@@ -157,21 +197,27 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         decoration: panel(),
         child: Column(
           children: [
-            const Icon(Icons.assignment_outlined, color: kCyan, size: 48),
-
+            const Icon(
+              Icons.assignment_outlined,
+              color: kCyan,
+              size: 48,
+            ),
             const SizedBox(height: 12),
-
             AppText(
               'No submitted requests yet.',
-              style: white(17, w: FontWeight.bold),
+              style: white(
+                17,
+                w: FontWeight.bold,
+              ),
             ),
-
             const SizedBox(height: 6),
-
             AppText(
-              'Choose a loan offer and submit it through Rushd to track it here.',
+              'Choose a loan offer and submit it to track it here.',
               textAlign: TextAlign.center,
-              style: white(11, c: Colors.white54),
+              style: white(
+                11,
+                c: Colors.white54,
+              ),
             ),
           ],
         ),
@@ -182,7 +228,9 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
       children: requests
           .map(
             (request) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(
+                bottom: 14,
+              ),
               child: _requestCard(request),
             ),
           )
@@ -190,13 +238,14 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     );
   }
 
-  Widget _requestCard(BorrowerRequestData request) {
-    final status = request.status.toLowerCase();
+  Widget _requestCard(
+    BorrowerRequestData request,
+  ) {
+    final status = request.status.toLowerCase().trim();
+    final logo = _bankLogo(request.bankName);
 
     Color statusColor;
-
     IconData statusIcon;
-
     String statusTitle;
 
     if (status == 'approved') {
@@ -221,41 +270,68 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 55,
                 height: 50,
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.account_balance, color: kBlue),
+                child: logo != null
+                    ? Image.asset(
+                        logo,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) {
+                          return const Icon(
+                            Icons.account_balance,
+                            color: kBlue,
+                          );
+                        },
+                      )
+                    : const Icon(
+                        Icons.account_balance,
+                        color: kBlue,
+                      ),
               ),
 
               const SizedBox(width: 14),
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     AppText(
                       request.bankName,
-                      style: white(17, w: FontWeight.bold),
+                      style: white(
+                        17,
+                        w: FontWeight.bold,
+                      ),
                     ),
-
                     const SizedBox(height: 4),
-
-                    AppText(request.offerName, style: white(11, c: kCyan)),
-
+                    AppText(
+                      request.offerName,
+                      style: white(
+                        11,
+                        c: kCyan,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-
                     AppText(
                       '${request.loanType} • SAR ${request.requestedAmount.toStringAsFixed(0)}',
-                      style: white(10, c: Colors.white54),
+                      style: white(
+                        10,
+                        c: Colors.white54,
+                      ),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(width: 10),
 
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -269,10 +345,12 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(statusIcon, color: statusColor, size: 16),
-
+                    Icon(
+                      statusIcon,
+                      color: statusColor,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
-
                     AppText(
                       statusTitle,
                       style: TextStyle(
@@ -295,11 +373,16 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             decoration: BoxDecoration(
               color: statusColor.withOpacity(.07),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withOpacity(.25)),
+              border: Border.all(
+                color: statusColor.withOpacity(.25),
+              ),
             ),
             child: AppText(
               _statusMessage(request),
-              style: white(11, c: Colors.white70),
+              style: white(
+                11,
+                c: Colors.white70,
+              ),
             ),
           ),
         ],
@@ -307,15 +390,18 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     );
   }
 
-  String _statusMessage(BorrowerRequestData request) {
-    final status = request.status.toLowerCase();
+  String _statusMessage(
+    BorrowerRequestData request,
+  ) {
+    final status = request.status.toLowerCase().trim();
 
     if (status == 'approved') {
       return 'Your loan request has been approved by the lender.';
     }
 
     if (status == 'rejected') {
-      final reason = request.rejectionReason?.trim() ?? '';
+      final reason =
+          request.rejectionReason?.trim() ?? '';
 
       if (reason.isNotEmpty) {
         return 'Your loan request was not approved by the lender.\nReason: $reason';

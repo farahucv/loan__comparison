@@ -9,10 +9,12 @@ class BorrowerProfileScreen extends StatefulWidget {
   const BorrowerProfileScreen({super.key});
 
   @override
-  State<BorrowerProfileScreen> createState() => _BorrowerProfileScreenState();
+  State<BorrowerProfileScreen> createState() =>
+      _BorrowerProfileScreenState();
 }
 
-class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
+class _BorrowerProfileScreenState
+    extends State<BorrowerProfileScreen> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   final BorrowerAppState s = BorrowerAppState.instance;
@@ -68,14 +70,19 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
 
       if (financial != null) {
         s.selectLoanType(
-          financial['preferred_loan_type']?.toString() ?? 'Personal Loan',
+          financial['preferred_loan_type']?.toString() ??
+              'Personal Loan',
         );
 
         s.saveAssessment(
-          monthlyIncome: _toDouble(financial['monthly_income']),
-          existingDebts: _toDouble(financial['existing_debts']),
-          monthlyExpenses: _toDouble(financial['monthly_expenses']),
-          desiredAmount: _toDouble(financial['desired_amount']),
+          monthlyIncome:
+              _toDouble(financial['monthly_income']),
+          existingDebts:
+              _toDouble(financial['existing_debts']),
+          monthlyExpenses:
+              _toDouble(financial['monthly_expenses']),
+          desiredAmount:
+              _toDouble(financial['desired_amount']),
         );
       }
 
@@ -101,12 +108,15 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
   }
 
   Future<void> _openFinancialAssessment() async {
-    await Navigator.pushNamed(context, '/loanAssessment');
+    await Navigator.pushNamed(
+      context,
+      '/loanAssessment',
+    );
 
     if (!mounted) return;
 
-    // Reload the updated information
-    // from Supabase after returning.
+    // Reload updated information from Supabase
+    // after returning from the assessment.
     await _loadProfile();
   }
 
@@ -117,7 +127,9 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
       builder: (_, __) => BorrowerShell(
         active: 3,
         child: isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
@@ -125,13 +137,13 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
+                    constraints:
+                        const BoxConstraints(maxWidth: 900),
                     child: LayoutBuilder(
                       builder: (_, c) {
                         final compact = c.maxWidth < 700;
 
                         final summary = _summary(s);
-
                         final details = _details(context, s);
 
                         if (compact) {
@@ -145,11 +157,18 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
                         }
 
                         return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
-                            Expanded(flex: 2, child: summary),
+                            Expanded(
+                              flex: 2,
+                              child: summary,
+                            ),
                             const SizedBox(width: 16),
-                            Expanded(flex: 4, child: details),
+                            Expanded(
+                              flex: 4,
+                              child: details,
+                            ),
                           ],
                         );
                       },
@@ -162,208 +181,162 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
   }
 
   Widget _summary(BorrowerAppState s) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(24),
-    decoration: panel(),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: const BoxDecoration(color: kBlue, shape: BoxShape.circle),
-          child: const Icon(
-            Icons.person_outline,
-            color: Colors.white,
-            size: 32,
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        AppText(
-          s.fullName,
-          textAlign: TextAlign.center,
-          style: white(16, w: FontWeight.w800),
-        ),
-
-        AppText('Borrower', style: white(10, c: Colors.white54)),
-
-        const SizedBox(height: 26),
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: panel(radius: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText('Profile Status', style: white(10, w: FontWeight.bold)),
-
-              const SizedBox(height: 4),
-
-              AppText(
-                s.income > 0
-                    ? 'Financial information saved and ready for loan assessment.'
-                    : 'Complete your financial assessment to save your profile.',
-                style: white(9, c: Colors.white54),
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: panel(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: kBlue,
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _details(BuildContext context, BorrowerAppState s) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: panel(),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText('Borrower Profile', style: white(23, w: FontWeight.w900)),
-
-        const SizedBox(height: 16),
-
-        _responsiveInfo(
-          'Email',
-          s.email.isEmpty ? 'Not entered' : s.email,
-          'Mobile',
-          s.phone.isEmpty ? 'Not entered' : s.phone,
-        ),
-
-        const SizedBox(height: 10),
-
-        _responsiveInfo(
-          'Monthly Income',
-          money(s.income),
-          'Monthly Expenses',
-          money(s.expenses),
-        ),
-
-        const SizedBox(height: 10),
-
-        _responsiveInfo(
-          'Existing Loans/Debts',
-          money(s.debts),
-          'Preferred Loan Type',
-          s.loanType,
-        ),
-
-        const SizedBox(height: 20),
-
-        AppText('Preferences', style: white(18, w: FontWeight.w900)),
-
-        const SizedBox(height: 10),
-
-        _preferences(),
-
-        const SizedBox(height: 14),
-
-        SizedBox(
-          width: double.infinity,
-          child: blueButton(
-            'Update Financial Profile',
-            _openFinancialAssessment,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _preferences() {
-    final settings = AppSettings.instance;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: panel(radius: 12),
-      child: LayoutBuilder(
-        builder: (_, box) {
-          final appearance = _prefGroup('Appearance', [
-            _choice('Dark', settings.isDark, () => settings.setDark(true)),
-            _choice('Light', !settings.isDark, () => settings.setDark(false)),
-          ]);
-
-          final language = _prefGroup('Language', [
-            _choice(
-              'English',
-              !settings.isArabic,
-              () => settings.setArabic(false),
+              child: const Icon(
+                Icons.person_outline,
+                color: Colors.white,
+                size: 32,
+              ),
             ),
-            _choice(
-              'Arabic',
-              settings.isArabic,
-              () => settings.setArabic(true),
+
+            const SizedBox(height: 16),
+
+            AppText(
+              s.fullName,
+              textAlign: TextAlign.center,
+              style: white(
+                16,
+                w: FontWeight.w800,
+              ),
             ),
-          ]);
 
-          if (box.maxWidth < 480) {
-            return Column(
-              children: [appearance, const SizedBox(height: 14), language],
-            );
-          }
+            AppText(
+              'Borrower',
+              style: white(
+                10,
+                c: Colors.white54,
+              ),
+            ),
 
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: appearance),
-              const SizedBox(width: 14),
-              Expanded(child: language),
-            ],
-          );
-        },
-      ),
-    );
-  }
+            const SizedBox(height: 26),
 
-  Widget _prefGroup(String title, List<Widget> choices) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      AppText(
-        title,
-        style: white(10, w: FontWeight.bold, c: Colors.white70),
-      ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: panel(radius: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    'Profile Status',
+                    style: white(
+                      10,
+                      w: FontWeight.bold,
+                    ),
+                  ),
 
-      const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
-      Wrap(spacing: 8, runSpacing: 8, children: choices),
-    ],
-  );
-
-  Widget _choice(String label, bool selected, VoidCallback onTap) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(20),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: selected ? kBlue : AppPalette.panel,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: selected ? kBlue : AppPalette.border),
-      ),
-      child: AppText(
-        label,
-        style: white(
-          11,
-          w: FontWeight.bold,
-          c: selected ? Colors.white : Colors.white70,
+                  AppText(
+                    s.income > 0
+                        ? 'Financial information saved and ready for loan assessment.'
+                        : 'Complete your financial assessment to save your profile.',
+                    style: white(
+                      9,
+                      c: Colors.white54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-    ),
-  );
+      );
 
-  Widget _responsiveInfo(String a, String b, String c, String d) =>
+  Widget _details(
+    BuildContext context,
+    BorrowerAppState s,
+  ) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: panel(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppText(
+              'Borrower Profile',
+              style: white(
+                23,
+                w: FontWeight.w900,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            _responsiveInfo(
+              'Email',
+              s.email.isEmpty ? 'Not entered' : s.email,
+              'Mobile',
+              s.phone.isEmpty ? 'Not entered' : s.phone,
+            ),
+
+            const SizedBox(height: 10),
+
+            _responsiveInfo(
+              'Monthly Income',
+              money(s.income),
+              'Monthly Expenses',
+              money(s.expenses),
+            ),
+
+            const SizedBox(height: 10),
+
+            _responsiveInfo(
+              'Existing Loans/Debts',
+              money(s.debts),
+              'Preferred Loan Type',
+              s.loanType,
+            ),
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              child: blueButton(
+                'Update Financial Profile',
+                _openFinancialAssessment,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _responsiveInfo(
+    String a,
+    String b,
+    String c,
+    String d,
+  ) =>
       LayoutBuilder(
         builder: (_, box) {
           if (box.maxWidth < 420) {
             return Column(
               children: [
-                SizedBox(width: double.infinity, child: _info(a, b)),
+                SizedBox(
+                  width: double.infinity,
+                  child: _info(a, b),
+                ),
                 const SizedBox(height: 10),
-                SizedBox(width: double.infinity, child: _info(c, d)),
+                SizedBox(
+                  width: double.infinity,
+                  child: _info(c, d),
+                ),
               ],
             );
           }
@@ -371,27 +344,47 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _info(a, b)),
+              Expanded(
+                child: _info(a, b),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _info(c, d)),
+              Expanded(
+                child: _info(c, d),
+              ),
             ],
           );
         },
       );
 
-  Widget _info(String a, String b) => Container(
-    padding: const EdgeInsets.all(13),
-    decoration: panel(radius: 10),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(a, style: white(9, c: Colors.white38)),
+  Widget _info(
+    String a,
+    String b,
+  ) =>
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: panel(radius: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppText(
+              a,
+              style: white(
+                9,
+                c: Colors.white38,
+              ),
+            ),
 
-        const SizedBox(height: 4),
+            const SizedBox(height: 4),
 
-        AppText(b, style: white(11, w: FontWeight.bold)),
-      ],
-    ),
-  );
+            AppText(
+              b,
+              style: white(
+                11,
+                w: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
 }
