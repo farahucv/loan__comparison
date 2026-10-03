@@ -5,6 +5,7 @@ import '../models/borrower_app_state.dart';
 import '../models/loan_offer.dart';
 
 import '../services/loan_offer_service.dart';
+import '../services/eligibility_service.dart';
 
 import 'borrower_ui.dart';
 
@@ -12,12 +13,12 @@ class LoanAnalysisScreen extends StatefulWidget {
   const LoanAnalysisScreen({super.key});
 
   @override
-  State<LoanAnalysisScreen> createState() =>
-      _LoanAnalysisScreenState();
+  State<LoanAnalysisScreen> createState() => _LoanAnalysisScreenState();
 }
 
 class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
   final LoanOfferService _offerService = LoanOfferService();
+  final EligibilityService _eligibilityService = EligibilityService();
 
   List<LoanOffer> offers = [];
 
@@ -100,10 +101,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
     return BorrowerShell(
       active: 1,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 28,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1050),
@@ -117,20 +115,14 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                       children: [
                         AppText(
                           'Your Loan Analysis',
-                          style: white(
-                            28,
-                            w: FontWeight.w900,
-                          ),
+                          style: white(28, w: FontWeight.w900),
                         ),
 
                         const SizedBox(height: 6),
 
                         AppText(
                           'Showing available ${state.loanType.toLowerCase()} offers for your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
-                          style: white(
-                            12,
-                            c: Colors.white54,
-                          ),
+                          style: white(12, c: Colors.white54),
                         ),
                       ],
                     );
@@ -141,10 +133,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                         children: [
                           title,
                           const SizedBox(height: 14),
-                          blueButton(
-                            'Refresh Offers',
-                            _loadOffers,
-                          ),
+                          blueButton('Refresh Offers', _loadOffers),
                         ],
                       );
                     }
@@ -153,10 +142,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                       children: [
                         Expanded(child: title),
                         const SizedBox(width: 16),
-                        blueButton(
-                          'Refresh Offers',
-                          _loadOffers,
-                        ),
+                        blueButton('Refresh Offers', _loadOffers),
                       ],
                     );
                   },
@@ -186,8 +172,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                         children: [
                           for (final item in items)
                             Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: SizedBox(
                                 width: double.infinity,
                                 child: item,
@@ -218,10 +203,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.auto_awesome,
-                        color: kCyan,
-                      ),
+                      const Icon(Icons.auto_awesome, color: kCyan),
 
                       const SizedBox(width: 12),
 
@@ -231,20 +213,14 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                           children: [
                             AppText(
                               'Rushd Loan Recommendations',
-                              style: white(
-                                15,
-                                w: FontWeight.bold,
-                              ),
+                              style: white(15, w: FontWeight.bold),
                             ),
 
                             const SizedBox(height: 4),
 
                             AppText(
                               'Offers are retrieved from Rushd partner lenders and filtered according to your selected loan type and requested amount.',
-                              style: white(
-                                11,
-                                c: Colors.white60,
-                              ),
+                              style: white(11, c: Colors.white60),
                             ),
                           ],
                         ),
@@ -257,10 +233,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
 
                 AppText(
                   'Available Offers',
-                  style: white(
-                    20,
-                    w: FontWeight.w900,
-                  ),
+                  style: white(20, w: FontWeight.w900),
                 ),
 
                 const SizedBox(height: 14),
@@ -286,10 +259,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
     );
   }
 
-  Widget _offersGrid(
-    BuildContext context,
-    List<LoanOffer> offers,
-  ) {
+  Widget _offersGrid(BuildContext context, List<LoanOffer> offers) {
     return LayoutBuilder(
       builder: (_, box) {
         if (box.maxWidth < 820) {
@@ -298,10 +268,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               for (final offer in offers)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _offerCard(
-                    context,
-                    offer,
-                  ),
+                  child: _offerCard(context, offer),
                 ),
             ],
           );
@@ -314,10 +281,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               .map(
                 (offer) => SizedBox(
                   width: (box.maxWidth - 28) / 3,
-                  child: _offerCard(
-                    context,
-                    offer,
-                  ),
+                  child: _offerCard(context, offer),
                 ),
               )
               .toList(),
@@ -326,11 +290,36 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
     );
   }
 
-  Widget _offerCard(
-    BuildContext context,
-    LoanOffer offer,
-  ) {
+  Widget _offerCard(BuildContext context, LoanOffer offer) {
     final logo = _bankLogo(offer.bankName);
+
+    final state = BorrowerAppState.instance;
+
+    final interestRate = double.tryParse(offer.interestRate);
+
+    final termMonths = int.tryParse(offer.term);
+
+    EligibilityResult? eligibility;
+
+    if (interestRate != null &&
+        termMonths != null &&
+        termMonths > 0 &&
+        interestRate >= 0 &&
+        state.income > 0 &&
+        state.amount > 0 &&
+        state.debts >= 0) {
+      try {
+        eligibility = _eligibilityService.calculate(
+          monthlyIncome: state.income,
+          currentMonthlyObligations: state.debts,
+          loanAmount: state.amount,
+          annualInterestRate: interestRate,
+          termMonths: termMonths,
+        );
+      } catch (_) {
+        eligibility = null;
+      }
+    }
 
     return Container(
       width: double.infinity,
@@ -361,63 +350,33 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                           );
                         },
                       )
-                    : const Icon(
-                        Icons.account_balance,
-                        color: kBlue,
-                      ),
+                    : const Icon(Icons.account_balance, color: kBlue),
               ),
 
               const Spacer(),
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: kBlue.withOpacity(.18),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: AppText(
-                  'Available',
-                  style: white(
-                    10,
-                    c: kCyan,
-                  ),
-                ),
+                child: AppText('Available', style: white(10, c: kCyan)),
               ),
             ],
           ),
 
           const SizedBox(height: 10),
 
-          AppText(
-            offer.bankName,
-            style: white(
-              17,
-              w: FontWeight.w800,
-            ),
-          ),
+          AppText(offer.bankName, style: white(17, w: FontWeight.w800)),
 
           const SizedBox(height: 3),
 
-          AppText(
-            offer.offerName,
-            style: white(
-              11,
-              c: Colors.white60,
-            ),
-          ),
+          AppText(offer.offerName, style: white(11, c: Colors.white60)),
 
           const SizedBox(height: 3),
 
-          AppText(
-            offer.loanType,
-            style: white(
-              10,
-              c: Colors.white54,
-            ),
-          ),
+          AppText(offer.loanType, style: white(10, c: Colors.white54)),
 
           const SizedBox(height: 15),
 
@@ -425,103 +384,121 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
             spacing: 18,
             runSpacing: 10,
             children: [
-              _mini(
-                'Rate',
-                '${offer.interestRate}%',
-              ),
-              _mini(
-                'Term',
-                '${offer.term} months',
-              ),
-              _mini(
-                'Max Amount',
-                'SAR ${offer.amount}',
-              ),
+              _mini('Rate', '${offer.interestRate}%'),
+              _mini('Term', '${offer.term} months'),
+              _mini('Max Amount', 'SAR ${offer.amount}'),
             ],
           ),
+
+          if (eligibility != null) ...[
+            const SizedBox(height: 16),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    'Eligibility Analysis',
+                    style: white(12, w: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 12,
+                    children: [
+                      _mini(
+                        'Eligibility Score',
+                        '${eligibility.finalScore.toStringAsFixed(0)}%',
+                      ),
+                      _mini('Classification', eligibility.classification),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 12,
+                    children: [
+                      _mini(
+                        'Monthly Installment',
+                        'SAR ${eligibility.monthlyInstallment.toStringAsFixed(2)}',
+                      ),
+                      _mini(
+                        'DTI',
+                        '${eligibility.dtiRatio.toStringAsFixed(1)}%',
+                      ),
+                      _mini(
+                        'Installment Ratio',
+                        '${eligibility.installmentRatio.toStringAsFixed(1)}%',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 14),
 
           AppText(
-            'This offer matches your selected loan type and supports your requested amount.',
-            style: white(
-              10,
-              c: Colors.white60,
-            ),
+            eligibility != null
+                ? 'This offer matches your selected loan type and requested amount. The eligibility result is a preliminary suitability indicator.'
+                : 'This offer matches your selected loan type and supports your requested amount.',
+            style: white(10, c: Colors.white60),
           ),
 
           const SizedBox(height: 18),
 
           SizedBox(
             width: double.infinity,
-            child: blueButton(
-              'View Offer',
-              () {
-                BorrowerAppState.instance.selectBank(
-                  offer.bankName,
-                );
+            child: blueButton('View Offer', () {
+              BorrowerAppState.instance.selectBank(offer.bankName);
 
-                Navigator.pushNamed(
-                  context,
-                  '/loanOfferDetails',
-                  arguments: offer,
-                );
-              },
-            ),
+              Navigator.pushNamed(
+                context,
+                '/loanOfferDetails',
+                arguments: offer,
+              );
+            }),
           ),
         ],
       ),
     );
   }
 
-  Widget _mini(
-    String label,
-    String value,
-  ) {
+  Widget _mini(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          label,
-          style: white(
-            9,
-            c: Colors.white38,
-          ),
-        ),
-        AppText(
-          value,
-          style: white(
-            11,
-            w: FontWeight.bold,
-          ),
-        ),
+        AppText(label, style: white(9, c: Colors.white38)),
+        AppText(value, style: white(11, w: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _emptyCard(
-    BorrowerAppState state,
-  ) {
+  Widget _emptyCard(BorrowerAppState state) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(35),
       decoration: panel(),
       child: Column(
         children: [
-          const Icon(
-            Icons.search_off_outlined,
-            color: kCyan,
-            size: 50,
-          ),
+          const Icon(Icons.search_off_outlined, color: kCyan, size: 50),
 
           const SizedBox(height: 15),
 
           AppText(
             'No matching offers found.',
-            style: white(
-              17,
-              w: FontWeight.bold,
-            ),
+            style: white(17, w: FontWeight.bold),
           ),
 
           const SizedBox(height: 7),
@@ -529,10 +506,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
           AppText(
             'There are currently no active ${state.loanType.toLowerCase()} offers that support your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
             textAlign: TextAlign.center,
-            style: white(
-              11,
-              c: Colors.white54,
-            ),
+            style: white(11, c: Colors.white54),
           ),
         ],
       ),
@@ -546,20 +520,13 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
       decoration: panel(),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.redAccent,
-            size: 45,
-          ),
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 45),
 
           const SizedBox(height: 12),
 
           AppText(
             'Unable to load offers.',
-            style: white(
-              16,
-              w: FontWeight.bold,
-            ),
+            style: white(16, w: FontWeight.bold),
           ),
 
           const SizedBox(height: 6),
@@ -567,18 +534,12 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
           Text(
             error,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 11,
-            ),
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
           ),
 
           const SizedBox(height: 15),
 
-          blueButton(
-            'Try Again',
-            _loadOffers,
-          ),
+          blueButton('Try Again', _loadOffers),
         ],
       ),
     );

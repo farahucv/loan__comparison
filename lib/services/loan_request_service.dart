@@ -15,6 +15,12 @@ class LenderRequestData {
   final double existingDebts;
   final double monthlyExpenses;
 
+  final double? eligibilityScore;
+  final double? monthlyInstallment;
+  final double? installmentRatio;
+  final double? dtiRatio;
+  final String? eligibilityClassification;
+
   final String status;
   final String? rejectionReason;
   final DateTime? createdAt;
@@ -29,6 +35,11 @@ class LenderRequestData {
     required this.monthlyIncome,
     required this.existingDebts,
     required this.monthlyExpenses,
+    required this.eligibilityScore,
+    required this.monthlyInstallment,
+    required this.installmentRatio,
+    required this.dtiRatio,
+    required this.eligibilityClassification,
     required this.status,
     required this.rejectionReason,
     required this.createdAt,
@@ -44,6 +55,12 @@ class BorrowerRequestData {
   final String loanType;
   final double requestedAmount;
 
+  final double? eligibilityScore;
+  final double? monthlyInstallment;
+  final double? installmentRatio;
+  final double? dtiRatio;
+  final String? eligibilityClassification;
+
   final String status;
   final String? rejectionReason;
 
@@ -55,6 +72,11 @@ class BorrowerRequestData {
     required this.offerName,
     required this.loanType,
     required this.requestedAmount,
+    required this.eligibilityScore,
+    required this.monthlyInstallment,
+    required this.installmentRatio,
+    required this.dtiRatio,
+    required this.eligibilityClassification,
     required this.status,
     required this.rejectionReason,
     required this.createdAt,
@@ -83,6 +105,8 @@ class LoanRequestService {
       throw Exception('Offer information is incomplete.');
     }
 
+    // Eligibility values are calculated automatically
+    // by the Supabase database trigger.
     await _supabase.from('loan_requests').insert({
       'borrower_id': user.id,
       'offer_id': offer.id,
@@ -126,11 +150,9 @@ class LoanRequestService {
             .maybeSingle();
 
         if (offer != null) {
-          bankName =
-              offer['bank_name']?.toString() ?? 'Bank';
+          bankName = offer['bank_name']?.toString() ?? 'Bank';
 
-          offerName =
-              offer['offer_name']?.toString() ?? 'Loan Offer';
+          offerName = offer['offer_name']?.toString() ?? 'Loan Offer';
         }
       }
 
@@ -140,15 +162,16 @@ class LoanRequestService {
           bankName: bankName,
           offerName: offerName,
           loanType: row['loan_type']?.toString() ?? '',
-          requestedAmount:
-              _toDouble(row['requested_amount']),
-          status:
-              row['status']?.toString() ?? 'pending',
-          rejectionReason:
-              row['rejection_reason']?.toString(),
-          createdAt: DateTime.tryParse(
-            row['created_at']?.toString() ?? '',
-          ),
+          requestedAmount: _toDouble(row['requested_amount']),
+          eligibilityScore: _toNullableDouble(row['eligibility_score']),
+          monthlyInstallment: _toNullableDouble(row['monthly_installment']),
+          installmentRatio: _toNullableDouble(row['installment_ratio']),
+          dtiRatio: _toNullableDouble(row['dti_ratio']),
+          eligibilityClassification: row['eligibility_classification']
+              ?.toString(),
+          status: row['status']?.toString() ?? 'pending',
+          rejectionReason: row['rejection_reason']?.toString(),
+          createdAt: DateTime.tryParse(row['created_at']?.toString() ?? ''),
         ),
       );
     }
@@ -176,8 +199,7 @@ class LoanRequestService {
     final List<LenderRequestData> results = [];
 
     for (final row in requestRows) {
-      final borrowerId =
-          row['borrower_id']?.toString() ?? '';
+      final borrowerId = row['borrower_id']?.toString() ?? '';
 
       final profile = await _supabase
           .from('profiles')
@@ -187,9 +209,7 @@ class LoanRequestService {
 
       final financial = await _supabase
           .from('borrower_profiles')
-          .select(
-            'monthly_income, existing_debts, monthly_expenses',
-          )
+          .select('monthly_income, existing_debts, monthly_expenses')
           .eq('user_id', borrowerId)
           .maybeSingle();
 
@@ -197,27 +217,22 @@ class LoanRequestService {
         LenderRequestData(
           id: row['id']?.toString() ?? '',
           borrowerId: borrowerId,
-          borrowerName:
-              profile?['full_name']?.toString() ?? 'Borrower',
-          borrowerPhone:
-              profile?['phone']?.toString() ?? '',
-          loanType:
-              row['loan_type']?.toString() ?? '',
-          requestedAmount:
-              _toDouble(row['requested_amount']),
-          monthlyIncome:
-              _toDouble(financial?['monthly_income']),
-          existingDebts:
-              _toDouble(financial?['existing_debts']),
-          monthlyExpenses:
-              _toDouble(financial?['monthly_expenses']),
-          status:
-              row['status']?.toString() ?? 'pending',
-          rejectionReason:
-              row['rejection_reason']?.toString(),
-          createdAt: DateTime.tryParse(
-            row['created_at']?.toString() ?? '',
-          ),
+          borrowerName: profile?['full_name']?.toString() ?? 'Borrower',
+          borrowerPhone: profile?['phone']?.toString() ?? '',
+          loanType: row['loan_type']?.toString() ?? '',
+          requestedAmount: _toDouble(row['requested_amount']),
+          monthlyIncome: _toDouble(financial?['monthly_income']),
+          existingDebts: _toDouble(financial?['existing_debts']),
+          monthlyExpenses: _toDouble(financial?['monthly_expenses']),
+          eligibilityScore: _toNullableDouble(row['eligibility_score']),
+          monthlyInstallment: _toNullableDouble(row['monthly_installment']),
+          installmentRatio: _toNullableDouble(row['installment_ratio']),
+          dtiRatio: _toNullableDouble(row['dti_ratio']),
+          eligibilityClassification: row['eligibility_classification']
+              ?.toString(),
+          status: row['status']?.toString() ?? 'pending',
+          rejectionReason: row['rejection_reason']?.toString(),
+          createdAt: DateTime.tryParse(row['created_at']?.toString() ?? ''),
         ),
       );
     }
@@ -248,10 +263,8 @@ class LoanRequestService {
         .from('loan_requests')
         .update({
           'status': status,
-          'rejection_reason':
-              status == 'rejected' ? rejectionReason : null,
-          'updated_at':
-              DateTime.now().toUtc().toIso8601String(),
+          'rejection_reason': status == 'rejected' ? rejectionReason : null,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', requestId)
         .eq('lender_id', user.id);
@@ -267,5 +280,17 @@ class LoanRequestService {
     }
 
     return double.tryParse(value.toString()) ?? 0;
+  }
+
+  double? _toNullableDouble(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value.toString());
   }
 }

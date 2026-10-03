@@ -290,6 +290,13 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
         ? Colors.redAccent
         : Colors.amberAccent;
 
+    final hasEligibility =
+        request.eligibilityScore != null &&
+        request.monthlyInstallment != null &&
+        request.installmentRatio != null &&
+        request.dtiRatio != null &&
+        request.eligibilityClassification != null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(22),
@@ -367,6 +374,17 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
           const SizedBox(height: 18),
 
+          AppText(
+            'Borrower Financial Information',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -376,7 +394,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                 'SAR ${request.monthlyIncome.toStringAsFixed(0)}',
               ),
               _infoBox(
-                'Existing Debts',
+                'Current Monthly Obligations',
                 'SAR ${request.existingDebts.toStringAsFixed(0)}',
               ),
               _infoBox(
@@ -389,6 +407,69 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
               ),
             ],
           ),
+
+          if (hasEligibility) ...[
+            const SizedBox(height: 22),
+
+            AppText(
+              'Eligibility Analysis',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(.04),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(.08)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _infoBox(
+                        'Eligibility Score',
+                        '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                      ),
+                      _infoBox(
+                        'Classification',
+                        request.eligibilityClassification!,
+                      ),
+                      _infoBox(
+                        'Monthly Installment',
+                        'SAR ${request.monthlyInstallment!.toStringAsFixed(2)}',
+                      ),
+                      _infoBox(
+                        'DTI',
+                        '${request.dtiRatio!.toStringAsFixed(2)}%',
+                      ),
+                      _infoBox(
+                        'Installment Ratio',
+                        '${request.installmentRatio!.toStringAsFixed(2)}%',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  AppText(
+                    'The eligibility result is a preliminary decision-support indicator and does not represent final loan approval.',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           if (request.status == 'pending') ...[
             const SizedBox(height: 20),
@@ -515,7 +596,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
   Widget _infoBox(String label, String value) {
     return Container(
-      width: 170,
+      width: 190,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(.05),

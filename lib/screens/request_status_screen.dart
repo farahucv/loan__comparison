@@ -9,8 +9,7 @@ class RequestStatusScreen extends StatefulWidget {
   const RequestStatusScreen({super.key});
 
   @override
-  State<RequestStatusScreen> createState() =>
-      _RequestStatusScreenState();
+  State<RequestStatusScreen> createState() => _RequestStatusScreenState();
 }
 
 class _RequestStatusScreenState extends State<RequestStatusScreen> {
@@ -83,15 +82,10 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     return BorrowerShell(
       active: 2,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24,
-          vertical: 38,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 38),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 850,
-            ),
+            constraints: const BoxConstraints(maxWidth: 850),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -99,23 +93,16 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppText(
                             'Request Status',
-                            style: white(
-                              28,
-                              w: FontWeight.w900,
-                            ),
+                            style: white(28, w: FontWeight.w900),
                           ),
                           const SizedBox(height: 5),
                           AppText(
                             'Track your submitted loan requests.',
-                            style: white(
-                              12,
-                              c: Colors.white54,
-                            ),
+                            style: white(12, c: Colors.white54),
                           ),
                         ],
                       ),
@@ -123,10 +110,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                     IconButton(
                       tooltip: 'Refresh',
                       onPressed: _loadRequests,
-                      icon: const Icon(
-                        Icons.refresh,
-                        color: Colors.white,
-                      ),
+                      icon: const Icon(Icons.refresh, color: Colors.white),
                     ),
                   ],
                 ),
@@ -159,26 +143,17 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         decoration: panel(),
         child: Column(
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.redAccent,
-              size: 45,
-            ),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 45),
             const SizedBox(height: 12),
             AppText(
               'Unable to load requests.',
-              style: white(
-                17,
-                w: FontWeight.bold,
-              ),
+              style: white(17, w: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white54,
-              ),
+              style: const TextStyle(color: Colors.white54),
             ),
             const SizedBox(height: 15),
             ElevatedButton(
@@ -197,27 +172,17 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         decoration: panel(),
         child: Column(
           children: [
-            const Icon(
-              Icons.assignment_outlined,
-              color: kCyan,
-              size: 48,
-            ),
+            const Icon(Icons.assignment_outlined, color: kCyan, size: 48),
             const SizedBox(height: 12),
             AppText(
               'No submitted requests yet.',
-              style: white(
-                17,
-                w: FontWeight.bold,
-              ),
+              style: white(17, w: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             AppText(
               'Choose a loan offer and submit it to track it here.',
               textAlign: TextAlign.center,
-              style: white(
-                11,
-                c: Colors.white54,
-              ),
+              style: white(11, c: Colors.white54),
             ),
           ],
         ),
@@ -228,9 +193,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
       children: requests
           .map(
             (request) => Padding(
-              padding: const EdgeInsets.only(
-                bottom: 14,
-              ),
+              padding: const EdgeInsets.only(bottom: 14),
               child: _requestCard(request),
             ),
           )
@@ -238,11 +201,17 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     );
   }
 
-  Widget _requestCard(
-    BorrowerRequestData request,
-  ) {
+  Widget _requestCard(BorrowerRequestData request) {
     final status = request.status.toLowerCase().trim();
+
     final logo = _bankLogo(request.bankName);
+
+    final hasEligibility =
+        request.eligibilityScore != null &&
+        request.monthlyInstallment != null &&
+        request.installmentRatio != null &&
+        request.dtiRatio != null &&
+        request.eligibilityClassification != null;
 
     Color statusColor;
     IconData statusIcon;
@@ -291,41 +260,25 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                           );
                         },
                       )
-                    : const Icon(
-                        Icons.account_balance,
-                        color: kBlue,
-                      ),
+                    : const Icon(Icons.account_balance, color: kBlue),
               ),
 
               const SizedBox(width: 14),
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AppText(
                       request.bankName,
-                      style: white(
-                        17,
-                        w: FontWeight.bold,
-                      ),
+                      style: white(17, w: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    AppText(
-                      request.offerName,
-                      style: white(
-                        11,
-                        c: kCyan,
-                      ),
-                    ),
+                    AppText(request.offerName, style: white(11, c: kCyan)),
                     const SizedBox(height: 3),
                     AppText(
                       '${request.loanType} • SAR ${request.requestedAmount.toStringAsFixed(0)}',
-                      style: white(
-                        10,
-                        c: Colors.white54,
-                      ),
+                      style: white(10, c: Colors.white54),
                     ),
                   ],
                 ),
@@ -345,11 +298,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      statusIcon,
-                      color: statusColor,
-                      size: 16,
-                    ),
+                    Icon(statusIcon, color: statusColor, size: 16),
                     const SizedBox(width: 6),
                     AppText(
                       statusTitle,
@@ -365,6 +314,121 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             ],
           ),
 
+          if (hasEligibility) ...[
+            const SizedBox(height: 18),
+
+            AppText(
+              'Eligibility Analysis',
+              style: white(14, w: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 10),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(.08)),
+              ),
+              child: Column(
+                children: [
+                  LayoutBuilder(
+                    builder: (_, box) {
+                      final items = [
+                        _eligibilityMetric(
+                          'Eligibility Score',
+                          '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                        ),
+                        _eligibilityMetric(
+                          'Classification',
+                          request.eligibilityClassification!,
+                        ),
+                      ];
+
+                      if (box.maxWidth < 500) {
+                        return Column(
+                          children: [
+                            for (final item in items)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: item,
+                                ),
+                              ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: items[0]),
+                          const SizedBox(width: 10),
+                          Expanded(child: items[1]),
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  LayoutBuilder(
+                    builder: (_, box) {
+                      final items = [
+                        _eligibilityMetric(
+                          'Monthly Installment',
+                          'SAR ${request.monthlyInstallment!.toStringAsFixed(2)}',
+                        ),
+                        _eligibilityMetric(
+                          'DTI',
+                          '${request.dtiRatio!.toStringAsFixed(2)}%',
+                        ),
+                        _eligibilityMetric(
+                          'Installment Ratio',
+                          '${request.installmentRatio!.toStringAsFixed(2)}%',
+                        ),
+                      ];
+
+                      if (box.maxWidth < 650) {
+                        return Column(
+                          children: [
+                            for (final item in items)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: item,
+                                ),
+                              ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: items[0]),
+                          const SizedBox(width: 10),
+                          Expanded(child: items[1]),
+                          const SizedBox(width: 10),
+                          Expanded(child: items[2]),
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  AppText(
+                    'This result is a preliminary suitability indicator and does not represent final loan approval.',
+                    style: white(9, c: Colors.white54),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 18),
 
           Container(
@@ -373,16 +437,11 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             decoration: BoxDecoration(
               color: statusColor.withOpacity(.07),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: statusColor.withOpacity(.25),
-              ),
+              border: Border.all(color: statusColor.withOpacity(.25)),
             ),
             child: AppText(
               _statusMessage(request),
-              style: white(
-                11,
-                c: Colors.white70,
-              ),
+              style: white(11, c: Colors.white70),
             ),
           ),
         ],
@@ -390,9 +449,22 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     );
   }
 
-  String _statusMessage(
-    BorrowerRequestData request,
-  ) {
+  Widget _eligibilityMetric(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: panel(radius: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(label, style: white(9, c: Colors.white38)),
+          const SizedBox(height: 3),
+          AppText(value, style: white(12, w: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  String _statusMessage(BorrowerRequestData request) {
     final status = request.status.toLowerCase().trim();
 
     if (status == 'approved') {
@@ -400,8 +472,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     }
 
     if (status == 'rejected') {
-      final reason =
-          request.rejectionReason?.trim() ?? '';
+      final reason = request.rejectionReason?.trim() ?? '';
 
       if (reason.isNotEmpty) {
         return 'Your loan request was not approved by the lender.\nReason: $reason';
