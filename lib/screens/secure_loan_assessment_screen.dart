@@ -242,6 +242,47 @@ class _SecureLoanAssessmentScreenState
 
                   const SizedBox(height: 18),
 
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.amberAccent.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.amberAccent.withOpacity(.35),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.amberAccent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                'Make sure your information is accurate to get accurate offers.',
+                                style: white(11, w: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 5),
+                              AppText(
+                                'Requesting a loan with incorrect information may put your account at risk of being banned.',
+                                style: white(10, c: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
                   SizedBox(
                     width: double.infinity,
                     height: 48,

@@ -117,6 +117,21 @@ class AppSettings extends ChangeNotifier {
       'Monthly Expenses (SAR)': 'المصروفات الشهرية (ر.س)',
       'Desired Loan Amount (SAR)': 'مبلغ القرض المطلوب (ر.س)',
       'Check My Loan Options': 'تحقق من خيارات القرض',
+      'Make sure your information is accurate to get accurate offers.':
+          'تأكد من صحة بياناتك للحصول على عروض دقيقة.',
+      'Requesting a loan with incorrect information may put your account at risk of being banned.':
+          'تقديم طلب قرض ببيانات غير صحيحة قد يعرّض حسابك لخطر الحظر.',
+
+      // Next step
+      "What's the next step?": 'ما الخطوة التالية؟',
+      'Next Step': 'الخطوة التالية',
+      'Got it': 'حسنًا',
+      'Congratulations, your loan request has been approved by the lender. '
+              'To continue with the procedures and receive your loan, please visit '
+              'the bank in person and complete the remaining requirements.':
+          'تهانينا، تمت الموافقة على طلب قرضك من قبل جهة التمويل. '
+              'لاستكمال الإجراءات واستلام القرض، يُرجى مراجعة البنك شخصيًا '
+              'وإنهاء المتطلبات المتبقية.',
 
       // Analysis
       'Your Loan Analysis': 'تحليل القرض',

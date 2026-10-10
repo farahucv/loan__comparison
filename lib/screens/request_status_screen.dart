@@ -444,8 +444,79 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
               style: white(11, c: Colors.white70),
             ),
           ),
+
+          if (status == 'approved') ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.greenAccent,
+                  side: BorderSide(color: Colors.greenAccent.withOpacity(.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () => _showNextStep(request),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: AppText(
+                  "What's the next step?",
+                  style: white(12, w: FontWeight.bold, c: Colors.greenAccent),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  void _showNextStep(BorrowerRequestData request) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Directionality(
+          textDirection: AppSettings.instance.isArabic
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+          child: AlertDialog(
+            backgroundColor: const Color(0xff1E0B36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.account_balance, color: kCyan),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    AppSettings.instance.tr('Next Step'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              AppSettings.instance.tr(
+                'Congratulations, your loan request has been approved by the lender. '
+                'To continue with the procedures and receive your loan, please visit '
+                'the bank in person and complete the remaining requirements.',
+              ),
+              style: const TextStyle(color: Colors.white70, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(AppSettings.instance.tr('Got it')),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
