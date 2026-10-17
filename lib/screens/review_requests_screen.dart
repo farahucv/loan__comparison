@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_settings.dart';
 import '../services/loan_request_service.dart';
 
+import 'lender_application_panel.dart';
 import 'manage_offers_screen.dart';
 
 class ReviewRequestsScreen extends StatefulWidget {
@@ -470,6 +471,12 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
               ),
             ),
           ],
+
+          if (request.status == 'approved')
+            LenderApplicationPanel(
+              key: ValueKey('application_${request.id}'),
+              request: request,
+            ),
 
           if (request.status == 'pending') ...[
             const SizedBox(height: 20),

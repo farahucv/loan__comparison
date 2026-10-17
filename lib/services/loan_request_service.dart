@@ -48,6 +48,7 @@ class LenderRequestData {
 
 class BorrowerRequestData {
   final String id;
+  final String lenderId;
 
   final String bankName;
   final String offerName;
@@ -68,6 +69,7 @@ class BorrowerRequestData {
 
   BorrowerRequestData({
     required this.id,
+    required this.lenderId,
     required this.bankName,
     required this.offerName,
     required this.loanType,
@@ -159,6 +161,7 @@ class LoanRequestService {
       results.add(
         BorrowerRequestData(
           id: row['id']?.toString() ?? '',
+          lenderId: row['lender_id']?.toString() ?? '',
           bankName: bankName,
           offerName: offerName,
           loanType: row['loan_type']?.toString() ?? '',

@@ -122,6 +122,87 @@ class AppSettings extends ChangeNotifier {
       'Requesting a loan with incorrect information may put your account at risk of being banned.':
           'تقديم طلب قرض ببيانات غير صحيحة قد يعرّض حسابك لخطر الحظر.',
 
+      // Loan application
+      'Proceed to Get Your Loan': 'تابع للحصول على قرضك',
+      'Continue Your Journey': 'أكمل رحلتك',
+      'Loan Application': 'طلب القرض',
+      'Your Information': 'بياناتك',
+      'This information is sent to the bank for review. Make sure it is accurate.':
+          'تُرسل هذه البيانات إلى البنك للمراجعة. تأكد من صحتها.',
+      'National ID / Iqama Number': 'رقم الهوية / الإقامة',
+      'City': 'المدينة',
+      'Address (optional)': 'العنوان (اختياري)',
+      'Employer': 'جهة العمل',
+      'Job Title': 'المسمى الوظيفي',
+      'Years at Current Job': 'سنوات العمل الحالية',
+      'IBAN (optional)': 'رقم الآيبان (اختياري)',
+      'Notes for the bank (optional)': 'ملاحظات للبنك (اختياري)',
+      'Documents': 'المستندات',
+      'Upload any documents the bank may need, such as your ID, salary certificate or bank statement (PDF, JPG or PNG, up to 5 MB each).':
+          'ارفع أي مستندات قد يحتاجها البنك، مثل الهوية أو شهادة الراتب أو كشف الحساب (PDF أو JPG أو PNG، بحد أقصى 5 ميغابايت لكل ملف).',
+      'No documents uploaded yet.': 'لم يتم رفع أي مستندات بعد.',
+      'National ID': 'الهوية الوطنية',
+      'Salary Certificate': 'شهادة الراتب',
+      'Bank Statement': 'كشف الحساب',
+      'Other': 'أخرى',
+      'Choose File': 'اختر ملفًا',
+      'Open': 'فتح',
+      'Remove': 'إزالة',
+      'Call': 'اتصال',
+      'Questions? Call the bank': 'لديك أسئلة؟ اتصل بالبنك',
+      'The bank representative can also call you on the phone number saved in your profile.':
+          'يمكن لممثل البنك أيضًا الاتصال بك على رقم الجوال المحفوظ في ملفك.',
+      'Submit Application to the Bank': 'إرسال الطلب إلى البنك',
+      'Resubmit Application': 'إعادة إرسال الطلب',
+      'Your request was approved. Complete the application below and the bank will review it.':
+          'تمت الموافقة على طلبك. أكمل الطلب أدناه وسيقوم البنك بمراجعته.',
+      'APPLICATION APPROVED': 'تمت الموافقة على الطلب',
+      'APPLICATION NOT APPROVED': 'لم تتم الموافقة على الطلب',
+      'ACTION REQUIRED': 'مطلوب إجراء',
+      'UNDER REVIEW': 'قيد المراجعة',
+      'The bank approved your application. A bank representative will contact you to finalize the loan.':
+          'وافق البنك على طلبك. سيتواصل معك ممثل البنك لإنهاء إجراءات القرض.',
+      'The bank could not approve your application.':
+          'لم يتمكن البنك من الموافقة على طلبك.',
+      'The bank needs more information. Update your details or add documents, then resubmit.':
+          'يحتاج البنك إلى معلومات إضافية. حدّث بياناتك أو أضف مستندات ثم أعد الإرسال.',
+      'Your application was sent. The bank is reviewing it.':
+          'تم إرسال طلبك. البنك يقوم بمراجعته.',
+      'Message from the bank': 'رسالة من البنك',
+      'Submitted': 'تم الإرسال',
+      'Bank review': 'مراجعة البنك',
+      'Decision': 'القرار',
+      'Application status: Approved by the bank':
+          'حالة الطلب: تمت الموافقة من البنك',
+      'Application status: Not approved': 'حالة الطلب: لم تتم الموافقة',
+      'Application status: The bank needs more information':
+          'حالة الطلب: البنك يحتاج إلى معلومات إضافية',
+      'Application status: Under review by the bank':
+          'حالة الطلب: قيد المراجعة لدى البنك',
+      'Waiting for the borrower to complete the loan application.':
+          'بانتظار أن يكمل المقترض طلب القرض.',
+      'The borrower did not upload any documents.':
+          'لم يرفع المقترض أي مستندات.',
+      'Approve Application': 'الموافقة على الطلب',
+      'Request More Info': 'طلب معلومات إضافية',
+      'Request More Information': 'طلب معلومات إضافية',
+      'Send to Borrower': 'إرسال إلى المقترض',
+      'Call Borrower': 'اتصل بالمقترض',
+      'Cancel': 'إلغاء',
+      'Reject': 'رفض',
+      'Yes, Approve': 'نعم، وافق',
+      'Yes, Reject': 'نعم، ارفض',
+      'Reject Application': 'رفض الطلب',
+      'READY FOR REVIEW': 'جاهز للمراجعة',
+      'MORE INFO REQUESTED': 'تم طلب معلومات إضافية',
+      'APPLICATION REJECTED': 'تم رفض الطلب',
+      'Waiting for the borrower to add the requested information.':
+          'بانتظار أن يضيف المقترض المعلومات المطلوبة.',
+      'Tell the borrower what is missing': 'أخبر المقترض بما ينقصه',
+      'Enter the reason for rejection': 'اكتب سبب الرفض',
+      'Approve this loan application? The borrower will be notified to expect your contact.':
+          'الموافقة على طلب القرض هذا؟ سيعرف المقترض أن البنك سيتواصل معه.',
+
       // Next step
       "What's the next step?": 'ما الخطوة التالية؟',
       'Next Step': 'الخطوة التالية',

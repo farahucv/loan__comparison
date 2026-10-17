@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/app_settings.dart';
+import '../services/loan_application_service.dart';
 import '../services/loan_request_service.dart';
 
 import 'borrower_ui.dart';
+import 'loan_application_screen.dart';
 
 class RequestStatusScreen extends StatefulWidget {
   const RequestStatusScreen({super.key});
@@ -15,7 +17,13 @@ class RequestStatusScreen extends StatefulWidget {
 class _RequestStatusScreenState extends State<RequestStatusScreen> {
   final LoanRequestService _requestService = LoanRequestService();
 
+  final LoanApplicationService _applicationService =
+      LoanApplicationService();
+
   List<BorrowerRequestData> requests = [];
+
+  // request id -> loan application status
+  Map<String, String> applicationStatuses = {};
 
   bool isLoading = true;
   String? errorMessage;
@@ -61,10 +69,19 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     try {
       final data = await _requestService.getBorrowerRequests();
 
+      Map<String, String> applications = {};
+
+      try {
+        applications = await _applicationService.getBorrowerStatuses();
+      } catch (_) {
+        // The application step is optional; keep the list working.
+      }
+
       if (!mounted) return;
 
       setState(() {
         requests = data;
+        applicationStatuses = applications;
         isLoading = false;
       });
     } catch (error) {
@@ -466,10 +483,66 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () => _openApplication(request),
+                icon: const Icon(Icons.rocket_launch_outlined, size: 18),
+                label: AppText(
+                  applicationStatuses.containsKey(request.id)
+                      ? 'Continue Your Journey'
+                      : 'Proceed to Get Your Loan',
+                  style: white(12, w: FontWeight.bold),
+                ),
+              ),
+            ),
+
+            if (applicationStatuses.containsKey(request.id)) ...[
+              const SizedBox(height: 8),
+              AppText(
+                _applicationLabel(applicationStatuses[request.id]!),
+                style: white(10, c: Colors.white54),
+              ),
+            ],
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _openApplication(BorrowerRequestData request) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => LoanApplicationScreen(request: request)),
+    );
+
+    if (!mounted) return;
+
+    await _loadRequests();
+  }
+
+  String _applicationLabel(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Application status: Approved by the bank';
+      case 'rejected':
+        return 'Application status: Not approved';
+      case 'more_info_required':
+        return 'Application status: The bank needs more information';
+      default:
+        return 'Application status: Under review by the bank';
+    }
   }
 
   void _showNextStep(BorrowerRequestData request) {
