@@ -257,24 +257,137 @@ class SignResult {
   );
 }
 
-/// The rows of rushd_settings the app shows to borrowers.
+/// The rows of rushd_settings the app shows (never the demo signing code).
+/// Defaults match the migration, for when the settings cannot be read.
 class FinancingSettings {
   final int coolingOffBusinessDays;
   final bool demoFastCoolingOff;
   final int demoFastCoolingOffMinutes;
 
+  final int minTermMonths;
+  final int maxTermMonths;
+  final int maxOfferValidDays;
+
+  final double adminFeePct;
+  final double adminFeeMaxSar;
+
+  final double dbrSalaryDeductionCapPct;
+  final double dbrTotalCapPct;
+  final double dbrIncomeLimitSar;
+  final double dbrTotalCapAboveLimitPct;
+
   const FinancingSettings({
     this.coolingOffBusinessDays = 10,
     this.demoFastCoolingOff = false,
     this.demoFastCoolingOffMinutes = 2,
+    this.minTermMonths = 6,
+    this.maxTermMonths = 60,
+    this.maxOfferValidDays = 30,
+    this.adminFeePct = 1,
+    this.adminFeeMaxSar = 5000,
+    this.dbrSalaryDeductionCapPct = 33.33,
+    this.dbrTotalCapPct = 45,
+    this.dbrIncomeLimitSar = 25000,
+    this.dbrTotalCapAboveLimitPct = 45,
   });
 
-  factory FinancingSettings.fromMap(Map<String, dynamic> row) =>
-      FinancingSettings(
-        coolingOffBusinessDays: _toInt(row['cooling_off_business_days']),
-        demoFastCoolingOff: row['demo_fast_cooling_off'] == true,
-        demoFastCoolingOffMinutes: _toInt(row['demo_fast_cooling_off_minutes']),
-      );
+  /// Columns to select from rushd_settings.
+  static const String columns =
+      'cooling_off_business_days, demo_fast_cooling_off, demo_fast_cooling_off_minutes, '
+      'min_term_months, max_term_months, max_offer_valid_days, '
+      'admin_fee_pct, admin_fee_max_sar, '
+      'dbr_salary_deduction_cap_pct, dbr_total_cap_pct, dbr_income_limit_sar, dbr_total_cap_above_limit_pct';
+
+  factory FinancingSettings.fromMap(Map<String, dynamic> row) {
+    const d = FinancingSettings();
+
+    int i(String k, int fallback) => row[k] == null ? fallback : _toInt(row[k]);
+    double n(String k, double fallback) =>
+        row[k] == null ? fallback : _toDouble(row[k]);
+
+    return FinancingSettings(
+      coolingOffBusinessDays: i(
+        'cooling_off_business_days',
+        d.coolingOffBusinessDays,
+      ),
+      demoFastCoolingOff: row['demo_fast_cooling_off'] == true,
+      demoFastCoolingOffMinutes: i(
+        'demo_fast_cooling_off_minutes',
+        d.demoFastCoolingOffMinutes,
+      ),
+      minTermMonths: i('min_term_months', d.minTermMonths),
+      maxTermMonths: i('max_term_months', d.maxTermMonths),
+      maxOfferValidDays: i('max_offer_valid_days', d.maxOfferValidDays),
+      adminFeePct: n('admin_fee_pct', d.adminFeePct),
+      adminFeeMaxSar: n('admin_fee_max_sar', d.adminFeeMaxSar),
+      dbrSalaryDeductionCapPct: n(
+        'dbr_salary_deduction_cap_pct',
+        d.dbrSalaryDeductionCapPct,
+      ),
+      dbrTotalCapPct: n('dbr_total_cap_pct', d.dbrTotalCapPct),
+      dbrIncomeLimitSar: n('dbr_income_limit_sar', d.dbrIncomeLimitSar),
+      dbrTotalCapAboveLimitPct: n(
+        'dbr_total_cap_above_limit_pct',
+        d.dbrTotalCapAboveLimitPct,
+      ),
+    );
+  }
+
+  /// Total-obligations cap for a borrower with this monthly income.
+  double totalDbrCapFor(double income) =>
+      income <= dbrIncomeLimitSar ? dbrTotalCapPct : dbrTotalCapAboveLimitPct;
+}
+
+/// The loan offer a request was made on (defaults for a new financing offer).
+class LoanOfferTerms {
+  final double interestRate;
+  final int maxTermMonths;
+  final double maxAmount;
+
+  const LoanOfferTerms({
+    required this.interestRate,
+    required this.maxTermMonths,
+    required this.maxAmount,
+  });
+}
+
+/// Lender pipeline stages for approved applications.
+enum LenderStage {
+  awaitingOffer,
+  offerIssued,
+  awaitingSignature,
+  coolingOff,
+  readyToRelease,
+  active,
+}
+
+LenderStage lenderStageFor(FinancingOffer? offer, FinancingAgreement? a) {
+  if (a != null) {
+    switch (a.status) {
+      case 'offer_accepted':
+        return LenderStage.awaitingSignature;
+      case 'contract_signed':
+      case 'cooling_off':
+        final ended =
+            a.coolingOffEndsAt != null &&
+            !DateTime.now().isBefore(a.coolingOffEndsAt!);
+        return ended || a.earlyDisbursementWaiver
+            ? LenderStage.readyToRelease
+            : LenderStage.coolingOff;
+      case 'disbursed':
+      case 'active':
+        return LenderStage.active;
+    }
+
+    // withdrawn / cancelled: the lender may issue a new offer.
+    return LenderStage.awaitingOffer;
+  }
+
+  if (offer != null && offer.effectiveStatus == 'offer_issued') {
+    return LenderStage.offerIssued;
+  }
+
+  return LenderStage.awaitingOffer;
 }
 
 /// Where a borrower's request is in the whole journey.

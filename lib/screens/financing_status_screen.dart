@@ -11,6 +11,7 @@ import '../services/loan_request_service.dart';
 import '../services/money_format.dart';
 import 'borrower_ui.dart';
 import 'financing_offer_screen.dart';
+import 'financing_timeline.dart';
 import 'journey_navigation.dart';
 import 'journey_ui.dart';
 import 'loan_application_screen.dart';
@@ -24,22 +25,6 @@ class FinancingStatusScreen extends StatefulWidget {
 
   @override
   State<FinancingStatusScreen> createState() => _FinancingStatusScreenState();
-}
-
-class _TimelineStep {
-  final String title;
-  final DateTime? at;
-  final String? note;
-  final bool done;
-  final bool failed;
-
-  const _TimelineStep(
-    this.title, {
-    this.at,
-    this.note,
-    this.done = false,
-    this.failed = false,
-  });
 }
 
 class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
@@ -117,127 +102,6 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
     offer: offer,
     agreement: agreement,
   );
-
-  DateTime? _eventAt(String type) {
-    for (final e in events.reversed) {
-      if (e.eventType == type) return e.createdAt;
-    }
-
-    return null;
-  }
-
-  List<_TimelineStep> _steps() {
-    final app = application;
-    final o = offer;
-    final a = agreement;
-
-    final steps = <_TimelineStep>[
-      _TimelineStep(
-        'Application approved',
-        at: app?.status == 'approved' ? app?.updatedAt : null,
-        done: app?.status == 'approved',
-      ),
-    ];
-
-    if (o == null) {
-      steps.add(
-        const _TimelineStep(
-          'Offer issued',
-          note: 'Waiting for the bank to send your final offer.',
-        ),
-      );
-    } else {
-      steps.add(
-        _TimelineStep(
-          'Offer issued',
-          at: _eventAt('offer_issued') ?? o.createdAt,
-          note: o.version > 1 ? '${tr('Offer version')} ${o.version}' : null,
-          done: true,
-        ),
-      );
-
-      switch (o.effectiveStatus) {
-        case 'offer_declined':
-          steps.add(
-            _TimelineStep(
-              'Offer declined',
-              at: _eventAt('offer_declined'),
-              failed: true,
-              done: true,
-            ),
-          );
-          return steps;
-        case 'offer_expired':
-          steps.add(
-            _TimelineStep(
-              'Offer expired',
-              at: _eventAt('offer_expired') ?? o.validUntil,
-              failed: true,
-              done: true,
-            ),
-          );
-          return steps;
-      }
-    }
-
-    steps.add(
-      _TimelineStep(
-        'Accepted',
-        at: _eventAt('offer_accepted') ?? a?.kfsAcceptedAt,
-        note: a == null ? null : '${tr('Reference')} ${a.referenceNo}',
-        done: a != null,
-      ),
-    );
-
-    steps.add(
-      _TimelineStep(
-        'Signed',
-        at: _eventAt('contract_signed') ?? a?.signedAt,
-        done: a?.signedAt != null,
-      ),
-    );
-
-    steps.add(
-      _TimelineStep(
-        'Cooling-off',
-        at: _eventAt('cooling_off_started') ?? a?.signedAt,
-        note: a?.coolingOffEndsAt == null
-            ? null
-            : '${tr('Ends')} ${formatDateTime(a!.coolingOffEndsAt)}',
-        done: a?.signedAt != null,
-      ),
-    );
-
-    if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
-      steps.add(
-        _TimelineStep(
-          'Withdrawn from the agreement',
-          at: _eventAt('withdrawn') ?? a?.withdrawnAt,
-          failed: true,
-          done: true,
-        ),
-      );
-      return steps;
-    }
-
-    steps.add(
-      _TimelineStep(
-        'Disbursed',
-        at: _eventAt('disbursed') ?? a?.disbursedAt,
-        done: a?.disbursedAt != null,
-      ),
-    );
-
-    steps.add(
-      _TimelineStep(
-        'Active',
-        at: _eventAt('activated') ?? a?.disbursedAt,
-        done: a?.status == 'active',
-      ),
-    );
-
-    return steps;
-  }
 
   Future<void> _continue() async {
     final screen = journeyScreen(widget.request, _journey);
@@ -346,7 +210,16 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
         _nextInstallment(),
       ],
       const SizedBox(height: 16),
-      SectionCard(title: 'Timeline', child: _timeline(_steps())),
+      SectionCard(
+        title: 'Timeline',
+        child: FinancingTimeline(
+          applicationApproved: application?.status == 'approved',
+          approvedAt: application?.updatedAt,
+          offer: offer,
+          agreement: agreement,
+          events: events,
+        ),
+      ),
       if (schedule.isNotEmpty) ...[
         const SizedBox(height: 16),
         Container(
@@ -389,107 +262,6 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
         'This journey is a simulation. No real money is sent and no real contract is signed.',
       ),
     ];
-  }
-
-  Widget _timeline(List<_TimelineStep> steps) {
-    // The first step that is not done is the current one.
-    final current = steps.indexWhere((s) => !s.done);
-
-    return Column(
-      children: [
-        for (var i = 0; i < steps.length; i++)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 30,
-                  child: Column(
-                    children: [
-                      _dot(steps[i], isCurrent: i == current),
-                      if (i < steps.length - 1)
-                        Expanded(
-                          child: Container(
-                            width: 2,
-                            color: steps[i].done && !steps[i].failed
-                                ? Colors.greenAccent.withValues(alpha: .6)
-                                : Colors.white24,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          steps[i].title,
-                          style: white(
-                            13,
-                            w: FontWeight.bold,
-                            c: steps[i].failed
-                                ? Colors.redAccent
-                                : steps[i].done || i == current
-                                ? Colors.white
-                                : Colors.white38,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          steps[i].done
-                              ? formatDateTime(steps[i].at)
-                              : i == current
-                              ? tr('In progress')
-                              : tr('Not started'),
-                          style: white(11, c: Colors.white54),
-                        ),
-                        if (steps[i].note != null) ...[
-                          const SizedBox(height: 2),
-                          AppText(
-                            steps[i].note!,
-                            style: white(11, c: Colors.white54),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _dot(_TimelineStep step, {required bool isCurrent}) {
-    final color = step.failed
-        ? Colors.redAccent
-        : step.done
-        ? Colors.greenAccent
-        : isCurrent
-        ? kCyan
-        : Colors.white24;
-
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: step.done ? color : Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 2),
-      ),
-      child: step.done
-          ? Icon(
-              step.failed ? Icons.close : Icons.check,
-              size: 14,
-              color: Colors.black,
-            )
-          : null,
-    );
   }
 
   Widget _receipt(FinancingAgreement a, FinancingOffer o) {

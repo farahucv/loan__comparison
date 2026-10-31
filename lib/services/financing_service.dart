@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/financing.dart';
+import 'financing_math.dart';
 
 /// Talks to the simulated financing journey in Supabase.
 ///
@@ -187,14 +188,137 @@ class FinancingService {
   Future<FinancingSettings> getSettings() async {
     final row = await _supabase
         .from('rushd_settings')
-        .select(
-          'cooling_off_business_days, demo_fast_cooling_off, demo_fast_cooling_off_minutes',
-        )
+        .select(FinancingSettings.columns)
         .maybeSingle();
 
     return row == null
         ? const FinancingSettings()
         : FinancingSettings.fromMap(row);
+  }
+
+  // =========================
+  // LENDER: PREVIEW & PIPELINE
+  // =========================
+
+  /// rushd_calc_financing: the same numbers the database will save. Only a
+  /// preview; rushd_issue_offer recalculates and checks everything.
+  Future<FinancingQuote> previewOffer({
+    required double principal,
+    required double annualProfitRate,
+    required String rateType,
+    required int termMonths,
+    required double adminFee,
+  }) async {
+    final row = _row(
+      await _supabase.rpc(
+        'rushd_calc_financing',
+        params: {
+          'p_principal': principal,
+          'p_annual_profit_rate': annualProfitRate,
+          'p_rate_type': rateType,
+          'p_term_months': termMonths,
+          'p_admin_fee': adminFee,
+        },
+      ),
+    );
+
+    double n(String k) => double.tryParse(row[k]?.toString() ?? '') ?? 0;
+
+    return FinancingQuote(
+      monthlyInstallment: n('monthly_installment'),
+      totalProfit: n('total_profit'),
+      totalRepayable: n('total_repayable'),
+      apr: n('apr'),
+    );
+  }
+
+  /// rushd_admin_fee_cap: least(1% of the amount, SAR 5,000) by default.
+  Future<double> adminFeeCap(double principal) async {
+    final result = await _supabase.rpc(
+      'rushd_admin_fee_cap',
+      params: {'p_principal': principal},
+    );
+
+    return double.tryParse(result.toString()) ?? 0;
+  }
+
+  /// The loan offer a request was made on: its rate, term and maximum.
+  Future<LoanOfferTerms?> getLoanOfferTerms(String requestId) async {
+    final request = await _supabase
+        .from('loan_requests')
+        .select('offer_id')
+        .eq('id', requestId)
+        .maybeSingle();
+
+    final offerId = request?['offer_id']?.toString();
+
+    if (offerId == null) return null;
+
+    final offer = await _supabase
+        .from('loan_offers')
+        .select('interest_rate, max_term_months, max_amount')
+        .eq('id', offerId)
+        .maybeSingle();
+
+    if (offer == null) return null;
+
+    return LoanOfferTerms(
+      interestRate:
+          double.tryParse(offer['interest_rate']?.toString() ?? '') ?? 0,
+      maxTermMonths:
+          int.tryParse(offer['max_term_months']?.toString() ?? '') ?? 0,
+      maxAmount: double.tryParse(offer['max_amount']?.toString() ?? '') ?? 0,
+    );
+  }
+
+  /// Lender: approved applications with their latest offer and agreement,
+  /// keyed by request id.
+  Future<Map<String, ({FinancingOffer? offer, FinancingAgreement? agreement})>>
+  getLenderPipeline() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null) throw Exception('Lender is not signed in.');
+
+    final applications = await _supabase
+        .from('loan_applications')
+        .select('id, request_id')
+        .eq('lender_id', user.id)
+        .eq('status', 'approved');
+
+    final offerRows = await _supabase
+        .from('financing_offers')
+        .select()
+        .eq('lender_id', user.id)
+        .order('version', ascending: false);
+
+    final agreementRows = await _supabase
+        .from('financing_agreements')
+        .select()
+        .eq('lender_id', user.id);
+
+    final latestOffer = <String, FinancingOffer>{};
+
+    for (final row in offerRows) {
+      final offer = FinancingOffer.fromMap(row);
+      latestOffer.putIfAbsent(offer.applicationId, () => offer);
+    }
+
+    final agreementByOffer = {
+      for (final row in agreementRows)
+        row['offer_id'].toString(): FinancingAgreement.fromMap(row),
+    };
+
+    return {
+      for (final app in applications)
+        app['request_id'].toString(): () {
+          final offer = latestOffer[app['id'].toString()];
+
+          return (
+            offer: offer,
+            agreement: offer == null ? null : agreementByOffer[offer.id],
+          );
+        }(),
+    };
   }
 
   /// Request id -> where that request is in the journey, for the

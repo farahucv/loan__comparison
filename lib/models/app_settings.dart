@@ -973,6 +973,89 @@ class AppSettings extends ChangeNotifier {
           'لا يمكن للمقترض تغيير طلبات المعلومات',
       'The review round is set automatically':
           'يتم تحديد جولة المراجعة تلقائيًا',
+
+      // ===== Lender financing =====
+      'Financing': 'التمويل',
+      'Financing pipeline': 'مسار التمويل',
+      'Approved applications by financing stage. Open one to issue an offer or release funds.':
+          'الطلبات المعتمدة حسب مرحلة التمويل. افتح طلبًا لإصدار عرض أو صرف المبلغ.',
+      'Unable to load the pipeline.': 'تعذر تحميل مسار التمويل.',
+      'No approved applications yet.': 'لا توجد طلبات معتمدة بعد.',
+      'Applications you approve in Review Requests will appear here.':
+          'ستظهر هنا الطلبات التي توافق عليها في مراجعة الطلبات.',
+      'Nothing in this stage.': 'لا يوجد شيء في هذه المرحلة.',
+      'Awaiting offer': 'بانتظار العرض',
+      'Awaiting signature': 'بانتظار التوقيع',
+      'Ready to release': 'جاهز للصرف',
+      'Borrower withdrew': 'انسحب المقترض',
+      'month': 'شهريًا',
+      'to release': 'للصرف',
+      'Released on': 'تاريخ الصرف',
+      'Valid until': 'صالح حتى',
+      'Version': 'الإصدار',
+      'version': 'الإصدار',
+      'APR': 'معدل النسبة السنوي',
+      'Issue final offer': 'إصدار العرض النهائي',
+      'Issue new offer': 'إصدار عرض جديد',
+      'Issue offer': 'إصدار العرض',
+      'Issue the final offer to the borrower.':
+          'أصدر العرض النهائي للمقترض.',
+      'The application is approved. Issue the final offer so the borrower can review the Key Facts Statement.':
+          'تمت الموافقة على الطلب. أصدر العرض النهائي ليتمكن المقترض من مراجعة ملخص المعلومات الأساسية.',
+      'The borrower withdrew during the cooling-off period.':
+          'انسحب المقترض خلال فترة التراجع.',
+      'The borrower declined the offer.': 'رفض المقترض العرض.',
+      'The offer expired on': 'انتهت صلاحية العرض في',
+      'The offer was cancelled.': 'تم إلغاء العرض.',
+      'Cooling-off ends in': 'تنتهي فترة التراجع خلال',
+      'The borrower allowed early release of the funds.':
+          'سمح المقترض بالصرف المبكر للمبلغ.',
+      'Release funds (simulated)': 'صرف المبلغ (محاكاة)',
+      'Release funds': 'صرف المبلغ',
+      'Funds released (simulated).': 'تم صرف المبلغ (محاكاة).',
+      'Available when the cooling-off period ends.':
+          'متاح عند انتهاء فترة التراجع.',
+      'Offer issued to the borrower.': 'تم إصدار العرض للمقترض.',
+      'Unable to load the offer settings.': 'تعذر تحميل إعدادات العرض.',
+      'Enter the amount, profit rate and admin fee to see the preview.':
+          'أدخل المبلغ ومعدل الربح والرسوم الإدارية لعرض المعاينة.',
+      'Please enter a valid amount, profit rate and admin fee.':
+          'يرجى إدخال مبلغ ومعدل ربح ورسوم إدارية صحيحة.',
+      'The preview uses the same formulas as the database, but only the database result is final. The offer is a simulation.':
+          'تستخدم المعاينة نفس معادلات قاعدة البيانات، لكن نتيجة قاعدة البيانات وحدها هي النهائية. العرض محاكاة.',
+      'Offer terms': 'شروط العرض',
+      'Financed amount (SAR)': 'مبلغ التمويل (ر.س)',
+      'Annual profit rate (%)': 'معدل الربح السنوي (%)',
+      'Rate type': 'نوع الربح',
+      'Flat rate: APR is higher than the quoted rate.':
+          'الربح الثابت: معدل النسبة السنوي أعلى من المعدل المعلن.',
+      'Admin fee (SAR)': 'الرسوم الإدارية (ر.س)',
+      'Use maximum': 'استخدم الحد الأقصى',
+      'Offer valid for': 'صلاحية العرض',
+      'days': 'أيام',
+      'Requested': 'المطلوب',
+      'Your loan offer': 'عرض القرض الخاص بك',
+      'Allowed': 'المسموح',
+      'SAMA consumer finance limit':
+          'حد التمويل الاستهلاكي حسب البنك المركزي السعودي',
+      'Maximum': 'الحد الأقصى',
+      'Live preview': 'معاينة مباشرة',
+      'Calculating…': 'جارٍ الحساب…',
+      'Paid to the borrower': 'المبلغ المودع للمقترض',
+      'Debt Burden Ratio': 'نسبة عبء الدين',
+      'Existing obligations': 'الالتزامات الحالية',
+      'New installment / income': 'القسط الجديد / الدخل',
+      'All obligations / income': 'جميع الالتزامات / الدخل',
+      'The borrower has no monthly income in their profile, so the Debt Burden Ratio cannot be checked. The database will refuse the offer.':
+          'لا يوجد دخل شهري في ملف المقترض، لذا لا يمكن التحقق من نسبة عبء الدين. ستقوم قاعدة البيانات برفض العرض.',
+      'Green: under 80% of the limit. Amber: close to the limit. Red: over the limit — the database will refuse the offer.':
+          'أخضر: أقل من 80٪ من الحد. كهرماني: قريب من الحد. أحمر: يتجاوز الحد — سترفض قاعدة البيانات العرض.',
+      'The amount is more than the borrower requested':
+          'المبلغ أكبر مما طلبه المقترض',
+      'The amount is more than the maximum of your loan offer':
+          'المبلغ أكبر من الحد الأقصى لعرض القرض',
+      'The admin fee is above the cap of':
+          'الرسوم الإدارية أعلى من الحد الأقصى البالغ',
     };
 
     if (m.containsKey(value)) {

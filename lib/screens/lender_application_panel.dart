@@ -4,8 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
+import '../models/financing.dart';
+import '../services/financing_service.dart';
 import '../services/loan_application_service.dart';
 import '../services/loan_request_service.dart';
+import '../services/money_format.dart';
+import 'financing_timeline.dart';
+import 'journey_ui.dart'
+    show CountdownText, formatDateTime, normalizeIban, saudiIban;
+import 'lender_issue_offer_screen.dart';
 
 /// Shown inside an approved request card on the lender's Review Requests
 /// screen: the borrower's loan application, documents and the decision.
@@ -20,8 +27,15 @@ class LenderApplicationPanel extends StatefulWidget {
 
 class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
   final LoanApplicationService _service = LoanApplicationService();
+  final FinancingService _financing = FinancingService();
 
   LoanApplicationData? application;
+
+  // Financing (only for approved applications)
+  FinancingOffer? offer;
+  FinancingAgreement? agreement;
+  List<FinancingEvent> events = [];
+  String? financingError;
 
   bool isLoading = true;
   bool isBusy = false;
@@ -37,10 +51,33 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
     try {
       final app = await _service.getForRequest(widget.request.id);
 
+      FinancingOffer? latest;
+      FinancingAgreement? loadedAgreement;
+      List<FinancingEvent> loadedEvents = [];
+      String? loadedError;
+
+      if (app?.status == 'approved') {
+        try {
+          final offers = await _financing.getOffersForApplication(app!.id);
+          latest = offers.isEmpty ? null : offers.first;
+
+          if (latest != null) {
+            loadedAgreement = await _financing.getAgreementForOffer(latest.id);
+            loadedEvents = await _financing.getEvents([latest.id]);
+          }
+        } catch (error) {
+          loadedError = friendlyError(error);
+        }
+      }
+
       if (!mounted) return;
 
       setState(() {
         application = app;
+        offer = latest;
+        agreement = loadedAgreement;
+        events = loadedEvents;
+        financingError = loadedError;
         isLoading = false;
         errorMessage = null;
       });
@@ -331,6 +368,11 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
         ),
         const SizedBox(height: 14),
 
+        if (app.status == 'approved') ...[
+          _financingCard(app),
+          const SizedBox(height: 16),
+        ],
+
         Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -524,6 +566,385 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
           ),
         ],
       ],
+    );
+  }
+
+  // =========================
+  // FINANCING
+  // =========================
+
+  Future<void> _openIssueOffer(LoanApplicationData app) async {
+    final issued = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LenderIssueOfferScreen(
+          request: widget.request,
+          application: app,
+          version: (offer?.version ?? 0) + 1,
+        ),
+      ),
+    );
+
+    if (issued == true && mounted) await _load();
+  }
+
+  bool get _canRelease {
+    final a = agreement;
+
+    if (a == null || a.status != 'cooling_off') return false;
+
+    final ended =
+        a.coolingOffEndsAt != null &&
+        !DateTime.now().isBefore(a.coolingOffEndsAt!);
+
+    return ended || a.earlyDisbursementWaiver;
+  }
+
+  Future<void> _release(LoanApplicationData app) async {
+    final a = agreement;
+    final o = offer;
+
+    if (a == null || o == null) return;
+
+    final iban = normalizeIban(app.iban);
+    final last4 = saudiIban.hasMatch(iban)
+        ? iban.substring(iban.length - 4)
+        : '????';
+    final amount = formatSar(o.principal - o.adminFee);
+
+    final question = AppSettings.instance.isArabic
+        ? 'صرف $amount إلى الآيبان المنتهي بـ $last4؟ هذه محاكاة؛ لا تنتقل أي أموال.'
+        : 'Release $amount to IBAN ending $last4? This is a simulation; no money moves.';
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: AppText('Release funds (simulated)'),
+        content: Text(question),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: AppText('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: AppText('Release funds'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+
+    setState(() => isBusy = true);
+
+    try {
+      await _financing.disburse(a.id);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: AppText('Funds released (simulated).')));
+
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text(friendlyError(error)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isBusy = false);
+    }
+  }
+
+  (String, Color) _financingStatus() {
+    final o = offer;
+    final a = agreement;
+
+    if (o == null) return ('Awaiting offer', Colors.lightBlueAccent);
+
+    if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
+      return ('Borrower withdrew', Colors.white54);
+    }
+
+    switch (o.effectiveStatus) {
+      case 'offer_declined':
+        return ('Offer declined', Colors.white54);
+      case 'offer_expired':
+        return ('Offer expired', Colors.orangeAccent);
+    }
+
+    return switch (lenderStageFor(o, a)) {
+      LenderStage.awaitingOffer => ('Awaiting offer', Colors.lightBlueAccent),
+      LenderStage.offerIssued => ('Offer issued', Colors.lightBlueAccent),
+      LenderStage.awaitingSignature => (
+        'Awaiting signature',
+        Colors.amberAccent,
+      ),
+      LenderStage.coolingOff => ('Cooling-off', Colors.amberAccent),
+      LenderStage.readyToRelease => ('Ready to release', Colors.greenAccent),
+      LenderStage.active => ('Active', Colors.greenAccent),
+    };
+  }
+
+  /// Why a new offer version may be issued, or null when it may not.
+  String? _closedReason() {
+    final o = offer;
+    final a = agreement;
+
+    if (o == null) return null;
+
+    if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
+      return AppSettings.instance.tr(
+        'The borrower withdrew during the cooling-off period.',
+      );
+    }
+
+    if (a != null) return null;
+
+    switch (o.effectiveStatus) {
+      case 'offer_declined':
+        String reason = '';
+        for (final e in events.reversed) {
+          if (e.eventType == 'offer_declined') {
+            reason = e.details['reason']?.toString().trim() ?? '';
+            break;
+          }
+        }
+        final base = AppSettings.instance.tr(
+          'The borrower declined the offer.',
+        );
+        return reason.isEmpty
+            ? base
+            : '$base ${AppSettings.instance.tr('Reason:')} $reason';
+      case 'offer_expired':
+        return '${AppSettings.instance.tr('The offer expired on')} ${formatDateTime(o.validUntil)}.';
+      case 'cancelled':
+        return AppSettings.instance.tr('The offer was cancelled.');
+    }
+
+    return null;
+  }
+
+  Widget _financingCard(LoanApplicationData app) {
+    final o = offer;
+    final a = agreement;
+    final (statusLabel, statusColor) = _financingStatus();
+    final closed = _closedReason();
+    final tr = AppSettings.instance.tr;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.lightBlue.withValues(alpha: .06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.lightBlueAccent.withValues(alpha: .3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.payments_outlined,
+                color: Colors.lightBlueAccent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppText(
+                  'Financing',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              _chip(statusLabel, statusColor),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (financingError != null)
+            Text(
+              financingError!,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            )
+          else if (o == null) ...[
+            AppText(
+              'The application is approved. Issue the final offer so the borrower can review the Key Facts Statement.',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: isBusy ? null : () => _openIssueOffer(app),
+              icon: const Icon(Icons.local_offer_outlined),
+              label: AppText('Issue final offer'),
+            ),
+          ] else ...[
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _mini('Version', '${o.version}'),
+                _mini('Monthly installment', formatSar(o.monthlyInstallment)),
+                _mini('APR', formatPercent(o.apr)),
+                if (o.effectiveStatus == 'offer_issued')
+                  _mini('Valid until', formatDateTime(o.validUntil)),
+                if (a != null) _mini('Reference', a.referenceNo),
+                if (a?.disbursedAt != null)
+                  _mini('Released on', formatDateTime(a!.disbursedAt)),
+              ],
+            ),
+
+            if (a?.status == 'cooling_off' && a!.coolingOffEndsAt != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.shield_outlined,
+                    color: Colors.amberAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  AppText(
+                    'Cooling-off ends in',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  CountdownText(
+                    target: a.coolingOffEndsAt!,
+                    onFinished: () => setState(() {}),
+                    style: const TextStyle(
+                      color: Colors.amberAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              if (a.earlyDisbursementWaiver) ...[
+                const SizedBox(height: 4),
+                AppText(
+                  'The borrower allowed early release of the funds.',
+                  style: const TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.white12,
+                ),
+                onPressed: isBusy || !_canRelease ? null : () => _release(app),
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: AppText('Release funds (simulated)'),
+              ),
+              if (!_canRelease)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: AppText(
+                    'Available when the cooling-off period ends.',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ),
+            ],
+
+            if (closed != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                closed,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.lightBlueAccent,
+                ),
+                onPressed: isBusy ? null : () => _openIssueOffer(app),
+                icon: const Icon(Icons.refresh),
+                label: Text(
+                  '${tr('Issue new offer')} (${tr('version')} ${o.version + 1})',
+                ),
+              ),
+            ],
+          ],
+
+          const SizedBox(height: 8),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              iconColor: Colors.lightBlueAccent,
+              collapsedIconColor: Colors.lightBlueAccent,
+              title: AppText(
+                'Timeline',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              children: [
+                FinancingTimeline(
+                  applicationApproved: true,
+                  approvedAt: app.updatedAt,
+                  offer: o,
+                  agreement: a,
+                  events: events,
+                  waitingForOfferNote: 'Issue the final offer to the borrower.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mini(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppText(
+            label,
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
