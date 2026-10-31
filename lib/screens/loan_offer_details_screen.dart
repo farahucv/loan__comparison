@@ -10,6 +10,7 @@ import '../services/eligibility_service.dart';
 import '../services/loan_request_service.dart';
 
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 
 class LoanOfferDetailsScreen extends StatefulWidget {
   const LoanOfferDetailsScreen({super.key});
@@ -23,6 +24,18 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
   final EligibilityService _eligibilityService = EligibilityService();
 
   bool isSubmitting = false;
+
+  /// Declared debts + active Rushd installments, same as the database.
+  double? totalObligations;
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadObligations(BorrowerAppState.instance.debts).then((o) {
+      if (mounted) setState(() => totalObligations = o.totalObligations);
+    });
+  }
 
   String? _bankLogo(String bankName) {
     final name = bankName.toLowerCase().trim();
@@ -69,7 +82,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
     try {
       return _eligibilityService.calculate(
         monthlyIncome: state.income,
-        currentMonthlyObligations: state.debts,
+        currentMonthlyObligations: totalObligations ?? state.debts,
         loanAmount: state.amount,
         annualInterestRate: interestRate,
         termMonths: termMonths,

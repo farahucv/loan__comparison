@@ -8,6 +8,7 @@ import '../services/financing_service.dart';
 import '../services/loan_request_service.dart';
 
 import 'final_offer_summary.dart';
+import 'obligations_ui.dart';
 
 import 'lender_application_panel.dart';
 import 'manage_offers_screen.dart';
@@ -432,6 +433,15 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                 formatSar(request.requestedAmount, decimals: 0),
               ),
             ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Simulated credit bureau: includes the borrower's other Rushd
+          // financings, which every debt-burden check counts.
+          CreditBureauSummaryLoader(
+            key: ValueKey('bureau_${request.borrowerId}_${request.id}'),
+            borrowerId: request.borrowerId,
           ),
 
           if (finalOffer != null) ...[

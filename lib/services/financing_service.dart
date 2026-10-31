@@ -232,6 +232,21 @@ class FinancingService {
     );
   }
 
+  /// rushd_borrower_obligations: declared debts + active Rushd installments.
+  /// [borrowerId] defaults to the signed-in borrower.
+  Future<BorrowerObligations> getObligations([String? borrowerId]) async {
+    final id = borrowerId ?? _supabase.auth.currentUser?.id;
+
+    if (id == null) throw Exception('You must sign in first.');
+
+    final result = await _supabase.rpc(
+      'rushd_borrower_obligations',
+      params: {'p_borrower_id': id},
+    );
+
+    return BorrowerObligations.fromMap(_row(result));
+  }
+
   /// rushd_admin_fee_cap: least(1% of the amount, SAR 5,000) by default.
   Future<double> adminFeeCap(double principal) async {
     final result = await _supabase.rpc(

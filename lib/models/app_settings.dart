@@ -1071,6 +1071,25 @@ class AppSettings extends ChangeNotifier {
       'Approved amount': 'المبلغ المعتمد',
       'Total DBR': 'إجمالي نسبة عبء الدين',
       'Initial estimate (at request time)': 'التقدير الأولي (وقت الطلب)',
+
+      // ===== Rushd obligations (simulated credit bureau) =====
+      'Rushd financing': 'التزامات تمويل رشد',
+      'Do not include Rushd financing — it is added automatically.':
+          'لا تُدخل تمويل رشد — تُضاف تلقائياً.',
+      'Credit bureau summary (simulated)': 'ملخص السجل الائتماني (محاكاة)',
+      'Active Rushd financings': 'تمويلات رشد النشطة',
+      'Rushd monthly installments': 'أقساط رشد الشهرية',
+      'Declared debts': 'الديون المصرّح بها',
+      'Total monthly obligations': 'إجمالي الالتزامات الشهرية',
+      'Rushd + new installment / income': 'أقساط رشد + القسط الجديد / الدخل',
+      'The credit bureau summary could not be loaded; only the declared debts are shown.':
+          'تعذر تحميل ملخص السجل الائتماني؛ يتم عرض الديون المصرّح بها فقط.',
+      "You do not have permission to see this borrower's obligations.":
+          'ليس لديك صلاحية للاطلاع على التزامات هذا المقترض.',
+      'Your monthly obligations have changed since this offer was issued. Accepting it would exceed the allowed limit. Ask the bank for an updated offer.':
+          'تغيّرت التزاماتك الشهرية منذ إصدار هذا العرض. قبوله سيتجاوز الحد المسموح. اطلب من البنك عرضًا محدّثًا.',
+      'Your monthly income is missing from your profile, so this offer cannot be accepted.':
+          'الدخل الشهري غير موجود في ملفك، لذا لا يمكن قبول هذا العرض.',
     };
 
     if (m.containsKey(value)) {

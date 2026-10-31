@@ -54,10 +54,11 @@ final List<(RegExp, String Function(Match))> _arabicTemplates = [
   ),
   (
     RegExp(
-      r'^Debt Burden Ratio check failed: the new installment \(SAR ([\d.]+)\) is ([\d.]+) % .* the limit is ([\d.]+) %',
+      r'^Debt Burden Ratio check failed: the new installment \(SAR ([\d.]+)\)( plus existing Rushd financing)? is ([\d.]+) % .* the limit is ([\d.]+) %',
     ),
-    (m) =>
-        'لم يجتز فحص نسبة عبء الدين: القسط الجديد (${m[1]} ر.س) يمثل ${m[2]}٪ من دخل المقترض، والحد المسموح ${m[3]}٪. خفّض المبلغ أو مدّد المدة.',
+    (m) => m[2] == null
+        ? 'لم يجتز فحص نسبة عبء الدين: القسط الجديد (${m[1]} ر.س) يمثل ${m[3]}٪ من دخل المقترض، والحد المسموح ${m[4]}٪. خفّض المبلغ أو مدّد المدة.'
+        : 'لم يجتز فحص نسبة عبء الدين: القسط الجديد (${m[1]} ر.س) مع أقساط تمويل رشد الحالية يمثل ${m[3]}٪ من دخل المقترض، والحد المسموح ${m[4]}٪. خفّض المبلغ أو مدّد المدة.',
   ),
   (
     RegExp(

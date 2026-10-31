@@ -359,6 +359,46 @@ class FinancingSettings {
       income <= dbrIncomeLimitSar ? dbrTotalCapPct : dbrTotalCapAboveLimitPct;
 }
 
+/// A borrower's monthly obligations as the simulated credit bureau sees
+/// them (rushd_borrower_obligations): declared debts plus the installments
+/// of their accepted / cooling-off / active Rushd financings.
+class BorrowerObligations {
+  final double declaredDebts;
+  final double rushdInstallments;
+  final int rushdCount;
+  final double totalObligations;
+
+  const BorrowerObligations({
+    required this.declaredDebts,
+    required this.rushdInstallments,
+    required this.rushdCount,
+    required this.totalObligations,
+  });
+
+  /// Used when the database function is not reachable: declared debts only.
+  factory BorrowerObligations.declaredOnly(double declaredDebts) =>
+      BorrowerObligations(
+        declaredDebts: declaredDebts,
+        rushdInstallments: 0,
+        rushdCount: 0,
+        totalObligations: declaredDebts,
+      );
+
+  factory BorrowerObligations.fromMap(Map<String, dynamic> row) {
+    final declared = _toDouble(row['declared_debts']);
+    final rushd = _toDouble(row['rushd_installments']);
+
+    return BorrowerObligations(
+      declaredDebts: declared,
+      rushdInstallments: rushd,
+      rushdCount: _toInt(row['rushd_count']),
+      totalObligations: row['total_obligations'] == null
+          ? declared + rushd
+          : _toDouble(row['total_obligations']),
+    );
+  }
+}
+
 /// The loan offer a request was made on (defaults for a new financing offer).
 class LoanOfferTerms {
   final double interestRate;

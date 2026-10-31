@@ -5,7 +5,9 @@ import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
+import '../models/financing.dart';
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 
 class BorrowerProfileScreen extends StatefulWidget {
   const BorrowerProfileScreen({super.key});
@@ -18,6 +20,9 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   final BorrowerAppState s = BorrowerAppState.instance;
+
+  /// Declared debts + active Rushd financings (added automatically).
+  BorrowerObligations? obligations;
 
   bool isLoading = true;
 
@@ -80,9 +85,12 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
         );
       }
 
+      final loadedObligations = await loadObligations(s.debts);
+
       if (!mounted) return;
 
       setState(() {
+        obligations = loadedObligations;
         isLoading = false;
       });
     } catch (error) {
@@ -254,6 +262,11 @@ class _BorrowerProfileScreenState extends State<BorrowerProfileScreen> {
           'Preferred Loan Type',
           s.loanType,
         ),
+
+        if (obligations != null && obligations!.rushdCount > 0) ...[
+          const SizedBox(height: 8),
+          RushdObligationsNote(obligations!),
+        ],
 
         const SizedBox(height: 20),
 

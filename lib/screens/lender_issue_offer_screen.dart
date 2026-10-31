@@ -13,6 +13,7 @@ import '../services/loan_request_service.dart';
 import '../services/money_format.dart';
 import 'borrower_ui.dart';
 import 'journey_ui.dart';
+import 'obligations_ui.dart';
 
 /// Lender: issue the final financing offer (Key Facts Statement) for an
 /// approved application. The preview uses the database's own maths
@@ -68,7 +69,13 @@ class _LenderIssueOfferScreenState extends State<LenderIssueOfferScreen> {
   double get _fee => double.tryParse(feeController.text.trim()) ?? -1;
 
   double get _income => widget.request.monthlyIncome;
-  double get _existing => widget.request.existingDebts;
+
+  /// Simulated credit bureau: declared debts + active Rushd installments.
+  /// Falls back to the declared debts until it is loaded.
+  late BorrowerObligations obligations = BorrowerObligations.declaredOnly(
+    widget.request.existingDebts,
+  );
+  bool obligationsFromBureau = false;
 
   @override
   void initState() {
@@ -95,7 +102,20 @@ class _LenderIssueOfferScreenState extends State<LenderIssueOfferScreen> {
       final loadedSettings = await _service.getSettings();
       final terms = await _service.getLoanOfferTerms(widget.request.id);
 
+      BorrowerObligations? bureau;
+
+      try {
+        bureau = await _service.getObligations(widget.request.borrowerId);
+      } catch (_) {
+        bureau = null;
+      }
+
       if (!mounted) return;
+
+      if (bureau != null) {
+        obligations = bureau;
+        obligationsFromBureau = true;
+      }
 
       final minTerm = loadedSettings.minTermMonths;
       final maxTerm = loadedSettings.maxTermMonths;
@@ -537,9 +557,13 @@ class _LenderIssueOfferScreenState extends State<LenderIssueOfferScreen> {
       );
     }
 
+    // Same formulas as rushd_issue_offer: Rushd installments count towards
+    // both ratios.
     final installment = q?.monthlyInstallment ?? 0;
-    final salaryDbr = installment / _income * 100;
-    final totalDbr = (_existing + installment) / _income * 100;
+    final salaryDbr =
+        (obligations.rushdInstallments + installment) / _income * 100;
+    final totalDbr =
+        (obligations.totalObligations + installment) / _income * 100;
     final totalCap = settings.totalDbrCapFor(_income);
 
     return SectionCard(
@@ -547,13 +571,22 @@ class _LenderIssueOfferScreenState extends State<LenderIssueOfferScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          CreditBureauSummary(obligations),
+          if (!obligationsFromBureau) ...[
+            const SizedBox(height: 6),
+            AppText(
+              'The credit bureau summary could not be loaded; only the declared debts are shown.',
+              style: const TextStyle(color: Colors.orangeAccent, fontSize: 11),
+            ),
+          ],
+          const SizedBox(height: 10),
           Text(
-            '${tr('Monthly income')}: ${formatSar(_income)} • ${tr('Existing obligations')}: ${formatSar(_existing)}',
+            '${tr('Monthly income')}: ${formatSar(_income)} • ${tr('Total monthly obligations')}: ${formatSar(obligations.totalObligations)}',
             style: white(11, c: Colors.white54),
           ),
           const SizedBox(height: 14),
           DbrBar(
-            label: 'New installment / income',
+            label: 'Rushd + new installment / income',
             value: salaryDbr,
             cap: settings.dbrSalaryDeductionCapPct,
           ),

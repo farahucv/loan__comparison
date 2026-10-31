@@ -4,7 +4,9 @@ import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 import '../models/borrower_app_state.dart';
+import '../models/financing.dart';
 
 class SecureLoanAssessmentScreen extends StatefulWidget {
   const SecureLoanAssessmentScreen({super.key});
@@ -23,11 +25,18 @@ class _SecureLoanAssessmentScreenState
 
   bool isSaving = false;
 
+  /// Active Rushd financings, shown under the existing-debts field.
+  BorrowerObligations? obligations;
+
   @override
   void initState() {
     super.initState();
 
     final state = BorrowerAppState.instance;
+
+    loadObligations(state.debts).then((o) {
+      if (mounted) setState(() => obligations = o);
+    });
 
     incomeController = TextEditingController(
       text: state.income == 0 ? '' : state.income.toStringAsFixed(0),
@@ -210,9 +219,24 @@ class _SecureLoanAssessmentScreenState
 
                   LayoutBuilder(
                     builder: (_, box) {
-                      final a = _field(
-                        'Existing Loans / Debts (SAR)',
-                        debtController,
+                      final a = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _field(
+                            'Existing Loans / Debts (SAR)',
+                            debtController,
+                          ),
+                          const SizedBox(height: 6),
+                          AppText(
+                            'Do not include Rushd financing — it is added automatically.',
+                            style: white(10, c: Colors.white54),
+                          ),
+                          if (obligations != null &&
+                              obligations!.rushdCount > 0) ...[
+                            const SizedBox(height: 4),
+                            RushdObligationsNote(obligations!),
+                          ],
+                        ],
                       );
 
                       final b = _field(

@@ -10,6 +10,7 @@ import '../services/loan_offer_service.dart';
 import '../services/eligibility_service.dart';
 
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 
 class LoanAnalysisScreen extends StatefulWidget {
   const LoanAnalysisScreen({super.key});
@@ -23,6 +24,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
   final EligibilityService _eligibilityService = EligibilityService();
 
   List<LoanOffer> offers = [];
+
+  /// Declared debts + active Rushd installments, same as the database.
+  double? totalObligations;
 
   bool isLoading = true;
 
@@ -80,10 +84,13 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
         return sameLoanType && enoughAmount;
       }).toList();
 
+      final obligations = await loadObligations(state.debts);
+
       if (!mounted) return;
 
       setState(() {
         offers = filteredOffers;
+        totalObligations = obligations.totalObligations;
         isLoading = false;
       });
     } catch (error) {
@@ -315,7 +322,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
       try {
         eligibility = _eligibilityService.calculate(
           monthlyIncome: state.income,
-          currentMonthlyObligations: state.debts,
+          currentMonthlyObligations: totalObligations ?? state.debts,
           loanAmount: state.amount,
           annualInterestRate: interestRate,
           termMonths: termMonths,
