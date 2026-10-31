@@ -6,6 +6,24 @@ import '../models/loan_offer.dart';
 class DashboardService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  /// New lender accounts must be verified by the Rushd admin
+  /// before they can publish offers.
+  Future<bool> isLenderVerified() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Lender is not signed in.');
+    }
+
+    final profile = await _supabase
+        .from('profiles')
+        .select('lender_verified')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    return profile?['lender_verified'] == true;
+  }
+
   Future<DashboardStats> getDashboardStats(List<LoanOffer> offers) async {
     final user = _supabase.auth.currentUser;
 

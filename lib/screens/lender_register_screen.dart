@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'lender_dashboard_screen.dart';
@@ -115,7 +116,7 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $error'),
+          content: Text(friendlyError(error)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -183,10 +184,10 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                         vertical: 36,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Column(
@@ -282,13 +283,13 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                           const SizedBox(height: 10),
 
                           DropdownButtonFormField<String>(
-                            value: selectedBank,
+                            initialValue: selectedBank,
                             dropdownColor: AppPalette.bg2,
                             decoration: InputDecoration(
                               hintText: "Represented Bank",
                               hintStyle: const TextStyle(color: Colors.white60),
                               filled: true,
-                              fillColor: Colors.white.withOpacity(0.08),
+                              fillColor: Colors.white.withValues(alpha: 0.08),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 18,
                                 vertical: 15,
@@ -394,7 +395,7 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
           hintStyle: const TextStyle(color: Colors.white60),
           suffixIcon: suffixIcon,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: Colors.white.withValues(alpha: 0.08),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 15,

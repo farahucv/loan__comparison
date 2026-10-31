@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -107,7 +108,7 @@ class _BorrowerRegisterScreenState extends State<BorrowerRegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $error'),
+          content: Text(friendlyError(error)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -175,10 +176,10 @@ class _BorrowerRegisterScreenState extends State<BorrowerRegisterScreen> {
                         vertical: 36,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Column(
@@ -339,7 +340,7 @@ class _BorrowerRegisterScreenState extends State<BorrowerRegisterScreen> {
           hintStyle: const TextStyle(color: Colors.white60),
           suffixIcon: suffixIcon,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: Colors.white.withValues(alpha: 0.08),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 15,

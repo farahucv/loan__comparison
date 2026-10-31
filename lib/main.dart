@@ -33,7 +33,7 @@ class RushdApp extends StatelessWidget {
 
     return AnimatedBuilder(
       animation: settings,
-      builder: (_, __) => MaterialApp(
+      builder: (_, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Rushd',
         themeMode: settings.isDark ? ThemeMode.dark : ThemeMode.light,

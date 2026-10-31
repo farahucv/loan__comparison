@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../services/loan_request_service.dart';
@@ -45,7 +46,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -81,7 +82,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Error updating request: $error'),
+          content: Text(friendlyError(error)),
         ),
       );
     }
@@ -161,7 +162,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.lightBlue.withOpacity(.2),
+                        color: Colors.lightBlue.withValues(alpha: .2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: AppText(
@@ -302,7 +303,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.08),
+        color: Colors.white.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -359,7 +360,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(.15),
+                  color: statusColor.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: AppText(
@@ -427,9 +428,9 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.04),
+                color: Colors.white.withValues(alpha: .04),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: .08)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,7 +607,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       width: 190,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.05),
+        color: Colors.white.withValues(alpha: .05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -636,7 +637,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.08),
+        color: Colors.white.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(25),
       ),
       child: Column(

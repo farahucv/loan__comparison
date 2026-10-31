@@ -130,12 +130,12 @@ class HomeScreen extends StatelessWidget {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.08),
+                                    color: Colors.blue.withValues(alpha: 0.08),
                                     borderRadius:
                                         BorderRadius.circular(20),
                                     border: Border.all(
                                       color: Colors.lightBlue
-                                          .withOpacity(0.4),
+                                          .withValues(alpha: 0.4),
                                     ),
                                   ),
                                   child: Row(
@@ -260,7 +260,7 @@ class HomeScreen extends StatelessWidget {
                               height: 350,
                               width: 450,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: ClipRRect(
@@ -554,7 +554,7 @@ class HomeScreen extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.lightBlue.withOpacity(0.2),
+                  color: Colors.lightBlue.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -662,7 +662,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 15),
                     featureCard(
-                      'Compare offers from partner banks',
+                      'Compare offers from banks shown (sample data)',
                     ),
                   ],
                 ),
@@ -758,7 +758,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AppText(
-                    'PARTNER BANKS',
+                    'BANKS SHOWN (SAMPLE DATA)',
                     style: const TextStyle(
                       color: Colors.lightBlue,
                       fontSize: 11,
@@ -768,7 +768,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   AppText(
-                    'Compare offers from verified banks',
+                    'Compare offers from banks shown (sample data)',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -785,7 +785,7 @@ class HomeScreen extends StatelessWidget {
                   constraints:
                       const BoxConstraints(maxWidth: 400),
                   child: AppText(
-                    'Rushd displays sample offers from partner banks to demonstrate the comparison and request flow.',
+                    'Rushd displays sample offers from the banks shown (sample data) to demonstrate the comparison and request flow.',
                     style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 12,
@@ -813,7 +813,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: AppSettings.instance.isDark
-                      ? Colors.white.withOpacity(0.06)
+                      ? Colors.white.withValues(alpha: 0.06)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
@@ -854,6 +854,16 @@ class HomeScreen extends StatelessWidget {
                 ),
               );
             }).toList(),
+          ),
+
+          const SizedBox(height: 18),
+
+          AppText(
+            'Bank names are used for academic demonstration only; Rushd has no partnership with these banks.',
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 11,
+            ),
           ),
         ],
       ),

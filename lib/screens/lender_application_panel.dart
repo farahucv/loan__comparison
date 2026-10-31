@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../services/loan_application_service.dart';
@@ -48,7 +49,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -88,7 +89,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Error updating application: $error'),
+          content: Text(friendlyError(error)),
         ),
       );
     } finally {
@@ -204,7 +205,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Could not open the document: $error'),
+          content: Text('Could not open the document: ${friendlyError(error)}'),
         ),
       );
     }
@@ -239,9 +240,9 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       margin: const EdgeInsets.only(top: 22),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.04),
+        color: Colors.white.withValues(alpha: .04),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.greenAccent.withOpacity(.25)),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: .25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +351,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.05),
+              color: Colors.white.withValues(alpha: .05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -491,7 +492,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(.15),
+        color: color.withValues(alpha: .15),
         borderRadius: BorderRadius.circular(16),
       ),
       child: AppText(
@@ -510,7 +511,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       width: width,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.05),
+        color: Colors.white.withValues(alpha: .05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

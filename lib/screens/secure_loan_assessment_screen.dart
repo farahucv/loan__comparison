@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'borrower_ui.dart';
@@ -131,7 +132,7 @@ class _SecureLoanAssessmentScreenState
     } catch (error) {
       if (!mounted) return;
 
-      _showError('Error: $error');
+      _showError(friendlyError(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -246,10 +247,10 @@ class _SecureLoanAssessmentScreenState
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.amberAccent.withOpacity(.10),
+                      color: Colors.amberAccent.withValues(alpha: .10),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Colors.amberAccent.withOpacity(.35),
+                        color: Colors.amberAccent.withValues(alpha: .35),
                       ),
                     ),
                     child: Row(
@@ -357,7 +358,7 @@ class _SecureLoanAssessmentScreenState
           style: white(13),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white.withOpacity(.10),
+            fillColor: Colors.white.withValues(alpha: .10),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 14,

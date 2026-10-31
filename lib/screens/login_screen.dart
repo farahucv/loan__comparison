@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -140,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $error'),
+          content: Text(friendlyError(error)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -210,9 +211,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       vertical: 36,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withOpacity(0.15)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                     ),
                     child: Column(
                       children: [
@@ -228,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.lightBlue,
                             ),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.08),
+                            fillColor: Colors.white.withValues(alpha: 0.08),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 18,
                               vertical: 15,
@@ -267,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                             ),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.08),
+                            fillColor: Colors.white.withValues(alpha: 0.08),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 18,
                               vertical: 15,

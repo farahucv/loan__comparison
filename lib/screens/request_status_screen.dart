@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../services/loan_application_service.dart';
@@ -89,7 +90,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -270,7 +271,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -309,7 +310,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(.15),
+                  color: statusColor.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -345,9 +346,9 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.04),
+                color: Colors.white.withValues(alpha: .04),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: .08)),
               ),
               child: Column(
                 children: [
@@ -452,9 +453,9 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(.07),
+              color: statusColor.withValues(alpha: .07),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withOpacity(.25)),
+              border: Border.all(color: statusColor.withValues(alpha: .25)),
             ),
             child: AppText(
               _statusMessage(request),
@@ -469,7 +470,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.greenAccent,
-                  side: BorderSide(color: Colors.greenAccent.withOpacity(.5)),
+                  side: BorderSide(color: Colors.greenAccent.withValues(alpha: .5)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),

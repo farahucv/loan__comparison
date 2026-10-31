@@ -11,7 +11,7 @@ class ChooseLoanTypeScreen extends StatelessWidget {
     final state = BorrowerAppState.instance;
     return AnimatedBuilder(
       animation: state,
-      builder: (_, __) => BorrowerShell(
+      builder: (_, _) => BorrowerShell(
         active: 1,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 42),
@@ -65,9 +65,9 @@ class ChooseLoanTypeScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: active ? const Color(0xff17205C) : Colors.white.withOpacity(.09),
+          color: active ? const Color(0xff17205C) : Colors.white.withValues(alpha: .09),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? kBlue : Colors.white.withOpacity(.06)),
+          border: Border.all(color: active ? kBlue : Colors.white.withValues(alpha: .06)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

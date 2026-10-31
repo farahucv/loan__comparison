@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'home_screen.dart';
@@ -59,7 +60,7 @@ class BorrowerShell extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: $error'),
+          content: Text('Error signing out: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -77,9 +78,9 @@ class BorrowerShell extends StatelessWidget {
               height: 78,
               padding: const EdgeInsets.symmetric(horizontal: 80),
               decoration: BoxDecoration(
-                color: const Color(0xff130022).withOpacity(.55),
+                color: const Color(0xff130022).withValues(alpha: .55),
                 border: Border(
-                  bottom: BorderSide(color: Colors.white.withOpacity(.06)),
+                  bottom: BorderSide(color: Colors.white.withValues(alpha: .06)),
                 ),
               ),
               child: Row(
@@ -87,7 +88,7 @@ class BorrowerShell extends StatelessWidget {
                   Image.asset(
                     'assets/images/rushd_log.png',
                     width: 150,
-                    errorBuilder: (_, __, ___) =>
+                    errorBuilder: (_, _, _) =>
                         AppText('Rushd', style: white(22, w: FontWeight.bold)),
                   ),
 
@@ -112,8 +113,8 @@ class BorrowerShell extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () => _signOut(context),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(.08),
-                      side: BorderSide(color: Colors.white.withOpacity(.12)),
+                      backgroundColor: Colors.white.withValues(alpha: .08),
+                      side: BorderSide(color: Colors.white.withValues(alpha: .12)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),

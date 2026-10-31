@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 
@@ -58,11 +59,64 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
   bool isLoadingOffers = true;
 
+  bool isCheckingVerification = true;
+  bool isVerified = false;
+
   @override
   void initState() {
     super.initState();
 
-    loadOffers();
+    _start();
+  }
+
+  Future<void> _start() async {
+    await _checkVerification();
+
+    if (isVerified) {
+      await loadOffers();
+    }
+  }
+
+  Future<void> _checkVerification() async {
+    try {
+      final verified = await service.isLenderVerified();
+
+      if (!mounted) return;
+
+      setState(() {
+        isVerified = verified;
+        isCheckingVerification = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      // The database rules still block unverified lenders,
+      // so keep the dashboard working if this check fails.
+      setState(() {
+        isVerified = true;
+        isCheckingVerification = false;
+      });
+    }
+  }
+
+  Future<void> _checkAgain() async {
+    setState(() {
+      isCheckingVerification = true;
+    });
+
+    await _start();
+
+    if (!mounted || isVerified) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppSettings.instance.tr(
+            'Your account is still pending verification.',
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> loadOffers() async {
@@ -93,7 +147,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading dashboard: $error'),
+          content: Text('Error loading dashboard: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -114,7 +168,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading statistics: $error'),
+          content: Text('Error loading statistics: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -137,7 +191,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: $error'),
+          content: Text('Error signing out: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -225,19 +279,21 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
                       children: [
                         _navItem("Home", active: true),
 
-                        const SizedBox(width: 35),
+                        if (isVerified && !isCheckingVerification) ...[
+                          const SizedBox(width: 35),
 
-                        GestureDetector(
-                          onTap: () => _openManageOffers(context),
-                          child: _navItem("Manage Offers"),
-                        ),
+                          GestureDetector(
+                            onTap: () => _openManageOffers(context),
+                            child: _navItem("Manage Offers"),
+                          ),
 
-                        const SizedBox(width: 35),
+                          const SizedBox(width: 35),
 
-                        GestureDetector(
-                          onTap: () => _openReviewRequests(context),
-                          child: _navItem("Review Requests"),
-                        ),
+                          GestureDetector(
+                            onTap: () => _openReviewRequests(context),
+                            child: _navItem("Review Requests"),
+                          ),
+                        ],
                       ],
                     ),
 
@@ -273,7 +329,11 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
               // MAIN CONTENT
               // =========================
               Expanded(
-                child: SingleChildScrollView(
+                child: isCheckingVerification
+                    ? const Center(child: CircularProgressIndicator())
+                    : !isVerified
+                    ? _pendingVerification()
+                    : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
                     vertical: 20,
@@ -295,7 +355,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(30),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: Column(
@@ -307,7 +367,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Row(
@@ -351,7 +411,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
                                     height: 85,
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(18),
                                     ),
                                     child: Image.asset(
@@ -482,6 +542,95 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
     );
   }
 
+  Widget _pendingVerification() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Container(
+            padding: const EdgeInsets.all(36),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: Colors.lightBlue,
+                  size: 52,
+                ),
+
+                const SizedBox(height: 20),
+
+                AppText(
+                  "Welcome,\n${widget.lenderName}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                AppText(
+                  "Your lender account is pending verification by Rushd",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    height: 1.3,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                AppText(
+                  "Thank you for registering. Before you can publish loan offers and review borrower requests, the Rushd team needs to confirm your account. You will get full access as soon as it is verified.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
+                  ),
+                  onPressed: _checkAgain,
+                  icon: const Icon(Icons.refresh),
+                  label: AppText(
+                    "Check Again",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _navItem(String title, {bool active = false}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -508,7 +657,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
@@ -555,7 +704,7 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
         height: isFullWidth ? 160 : 180,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(25),
         ),
         child: Column(

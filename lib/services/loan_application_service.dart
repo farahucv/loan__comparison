@@ -216,7 +216,11 @@ class LoanApplicationService {
 
       await _supabase.storage
           .from(bucket)
-          .uploadBinary(path, file.bytes);
+          .uploadBinary(
+            path,
+            file.bytes,
+            fileOptions: FileOptions(contentType: _contentType(file.name)),
+          );
 
       docs.add(
         LoanDocument(name: file.name, path: path, category: file.category),
@@ -273,6 +277,17 @@ class LoanApplicationService {
   // =========================
   // FILES
   // =========================
+
+  /// The picker only allows pdf, jpg, jpeg and png.
+  String _contentType(String fileName) {
+    final name = fileName.toLowerCase();
+
+    if (name.endsWith('.pdf')) return 'application/pdf';
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+
+    return 'application/octet-stream';
+  }
 
   Future<String> signedUrl(String path) {
     return _supabase.storage.from(bucket).createSignedUrl(path, 3600);

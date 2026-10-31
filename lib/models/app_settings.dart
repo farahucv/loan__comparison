@@ -81,18 +81,18 @@ class AppSettings extends ChangeNotifier {
 
       'AI-supported eligibility score':
           'تقييم أهلية مدعوم بالذكاء الاصطناعي',
-      'Compare offers from partner banks':
-          'قارن عروض البنوك الشريكة',
+      'Compare offers from banks shown (sample data)':
+          'قارن عروض البنوك المعروضة (بيانات تجريبية)',
       'Submit requests inside the platform':
           'أرسل الطلبات داخل المنصة',
       'Track lender decisions clearly':
           'تابع قرارات جهات التمويل بوضوح',
 
-      'PARTNER BANKS': 'البنوك الشريكة',
-      'Compare offers from verified banks':
-          'قارن العروض من البنوك المعتمدة',
-      'Rushd displays sample offers from partner banks to demonstrate the comparison and request flow.':
-          'يعرض رشد نماذج من عروض البنوك الشريكة لتوضيح آلية المقارنة وإرسال الطلبات.',
+      'BANKS SHOWN (SAMPLE DATA)': 'البنوك المعروضة (بيانات تجريبية)',
+      'Rushd displays sample offers from the banks shown (sample data) to demonstrate the comparison and request flow.':
+          'يعرض رشد نماذج من عروض البنوك المعروضة (بيانات تجريبية) لتوضيح آلية المقارنة وإرسال الطلبات.',
+      'Bank names are used for academic demonstration only; Rushd has no partnership with these banks.':
+          'أسماء البنوك مستخدمة لأغراض أكاديمية فقط، ولا توجد شراكة بين رشد وهذه البنوك.',
 
       // Borrower
       'Borrower Dashboard': 'لوحة المقترض',
@@ -267,6 +267,29 @@ class AppSettings extends ChangeNotifier {
       'Add Offer': 'إضافة عرض',
       'Performance Dashboard': 'لوحة الأداء',
       'Lender Dashboard': 'لوحة جهة التمويل',
+      'Your lender account is pending verification by Rushd':
+          'حساب جهة التمويل الخاص بك قيد التحقق من قبل رشد',
+      'Your lender account is pending verification by Rushd.':
+          'حساب جهة التمويل الخاص بك قيد التحقق من قبل رشد.',
+      'Thank you for registering. Before you can publish loan offers and review borrower requests, the Rushd team needs to confirm your account. You will get full access as soon as it is verified.':
+          'شكرًا لتسجيلك. قبل أن تتمكن من نشر عروض التمويل ومراجعة طلبات المقترضين، يحتاج فريق رشد إلى تأكيد حسابك. ستحصل على الوصول الكامل فور التحقق منه.',
+      'Check Again': 'تحقق مرة أخرى',
+      'Your account is still pending verification.':
+          'حسابك لا يزال قيد التحقق.',
+
+      // Errors
+      'This request has already been decided':
+          'تم اتخاذ قرار بشأن هذا الطلب مسبقًا',
+      'This application has already been decided':
+          'تم اتخاذ قرار بشأن هذا الطلب مسبقًا',
+      'You do not have permission to do this.':
+          'ليس لديك صلاحية للقيام بذلك.',
+      'File is too large. The maximum size is 5 MB.':
+          'الملف كبير جدًا. الحد الأقصى للحجم 5 ميغابايت.',
+      'Only PDF, JPG and PNG files are allowed.':
+          'يُسمح فقط بملفات PDF و JPG و PNG.',
+      'You can only upload documents to your own loan requests.':
+          'يمكنك رفع المستندات لطلبات القروض الخاصة بك فقط.',
     };
 
     if (m.containsKey(value)) {
@@ -351,11 +374,11 @@ class AppPalette {
       : const Color(0xffE8E2F3);
 
   static Color get panel => AppSettings.instance.isDark
-      ? Colors.white.withOpacity(.085)
-      : Colors.white.withOpacity(.90);
+      ? Colors.white.withValues(alpha: .085)
+      : Colors.white.withValues(alpha: .90);
 
   static Color get border => AppSettings.instance.isDark
-      ? Colors.white.withOpacity(.08)
+      ? Colors.white.withValues(alpha: .08)
       : const Color(0xffD8D0E6);
 }
 

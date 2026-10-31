@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -100,7 +101,7 @@ class _BorrowerProfileScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading profile: $error'),
+          content: Text('Error loading profile: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -124,7 +125,7 @@ class _BorrowerProfileScreenState
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: s,
-      builder: (_, __) => BorrowerShell(
+      builder: (_, _) => BorrowerShell(
         active: 3,
         child: isLoading
             ? const Center(

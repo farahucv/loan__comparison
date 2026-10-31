@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -89,7 +90,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -219,7 +220,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                             const SizedBox(height: 4),
 
                             AppText(
-                              'Offers are retrieved from Rushd partner lenders and filtered according to your selected loan type and requested amount.',
+                              'Offers are retrieved from the banks shown (sample data) and filtered according to your selected loan type and requested amount.',
                               style: white(11, c: Colors.white60),
                             ),
                           ],
@@ -343,7 +344,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -358,7 +359,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: kBlue.withOpacity(.18),
+                  color: kBlue.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: AppText('Available', style: white(10, c: kCyan)),
@@ -397,7 +398,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.05),
+                color: Colors.white.withValues(alpha: .05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

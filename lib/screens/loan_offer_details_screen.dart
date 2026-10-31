@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -106,7 +107,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage('Error submitting request: $error', error: true);
+      _showMessage(friendlyError(error), error: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -231,7 +232,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -250,7 +251,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(.15),
+                  color: Colors.green.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: AppText(

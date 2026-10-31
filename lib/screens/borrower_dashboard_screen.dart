@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -54,7 +55,7 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading dashboard: $error'),
+          content: Text('Error loading dashboard: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -73,7 +74,7 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: s,
-      builder: (_, __) => BorrowerShell(
+      builder: (_, _) => BorrowerShell(
         active: 0,
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -132,7 +133,7 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: kBlue.withOpacity(.18),
+            color: kBlue.withValues(alpha: .18),
             borderRadius: BorderRadius.circular(20),
           ),
           child: AppText(
@@ -327,10 +328,10 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
       decoration: BoxDecoration(
         color: active
             ? const Color(0xff17205C)
-            : Colors.white.withOpacity(.085),
+            : Colors.white.withValues(alpha: .085),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: active ? kBlue.withOpacity(.8) : Colors.white.withOpacity(.06),
+          color: active ? kBlue.withValues(alpha: .8) : Colors.white.withValues(alpha: .06),
         ),
       ),
       child: Column(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/loan_offer.dart';
@@ -53,7 +54,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading offers: $error'),
+          content: Text('Error loading offers: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -75,7 +76,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: $error'),
+          content: Text('Error signing out: ${friendlyError(error)}'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -132,7 +133,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting offer: $error'),
+          content: Text(friendlyError(error)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -327,7 +328,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
                                     margin: const EdgeInsets.only(bottom: 15),
                                     padding: const EdgeInsets.all(24),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(25),
                                     ),
                                     child: Row(

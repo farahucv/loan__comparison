@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -104,7 +105,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
       setState(() {
         isLoading = false;
-        loadError = error.toString();
+        loadError = friendlyError(error);
       });
     }
   }
@@ -232,7 +233,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      _error('Could not send the application: $error');
+      _error(friendlyError(error));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -244,7 +245,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (error) {
-      _error('Could not open the document: $error');
+      _error('Could not open the document: ${friendlyError(error)}');
     }
   }
 
@@ -473,9 +474,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: color.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(.3)),
+        border: Border.all(color: color.withValues(alpha: .3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,7 +513,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.06),
+                color: Colors.white.withValues(alpha: .06),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -681,7 +682,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           decoration: InputDecoration(
             counterText: '',
             filled: true,
-            fillColor: Colors.white.withOpacity(readOnly ? .05 : .10),
+            fillColor: Colors.white.withValues(alpha: readOnly ? .05 : .10),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 14,
