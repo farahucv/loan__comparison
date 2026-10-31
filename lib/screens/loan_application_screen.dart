@@ -1995,7 +1995,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
         ),
       ],
-      if (app.borrowerResponse.isNotEmpty) ...[
+      // The response belongs to the round under review; hide it once the
+      // bank has decided.
+      if (app.status == 'submitted' &&
+          app.reviewRound > 1 &&
+          app.borrowerResponse.isNotEmpty) ...[
         const SizedBox(height: 16),
         SectionCard(
           title: 'Your response to the bank',

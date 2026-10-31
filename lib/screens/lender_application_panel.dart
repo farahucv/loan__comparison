@@ -372,18 +372,12 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
           _box('Notes from the borrower', app.notes, width: double.infinity),
         ],
 
-        if (app.infoRequests.isNotEmpty) ...[
+        // info_requests stays saved after resubmission and decisions, so
+        // only show it while it matters: pending, or answered and waiting
+        // for the lender's review.
+        if (_showRequests(app)) ...[
           const SizedBox(height: 16),
           _requestedItems(app),
-        ],
-
-        if (app.borrowerResponse.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _box(
-            "Borrower's response",
-            app.borrowerResponse,
-            width: double.infinity,
-          ),
         ],
 
         const SizedBox(height: 16),
@@ -533,7 +527,18 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
     );
   }
 
-  /// The items asked for in the last "more information" request.
+  bool _showRequests(LoanApplicationData app) {
+    if (app.infoRequests.isEmpty) return false;
+
+    if (app.status == 'more_info_required') return true;
+
+    // Resubmitted: the requests belong to the previous round.
+    return app.status == 'submitted' && app.reviewRound > 1;
+  }
+
+  /// The items asked for in the last "more information" request: pending
+  /// while the borrower works on them, then "Requested in round N" with the
+  /// borrower's response once they resubmit.
   Widget _requestedItems(LoanApplicationData app) {
     final waiting = app.status == 'more_info_required';
 
@@ -551,7 +556,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
           AppText(
             waiting
                 ? 'Requested from the borrower'
-                : 'Requested in the previous round',
+                : '${AppSettings.instance.tr('Requested in round')} ${app.reviewRound - 1}',
             style: const TextStyle(
               color: Colors.orangeAccent,
               fontSize: 12,
@@ -563,10 +568,35 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                '• ${infoRequestLabel(item)}${item.note.isEmpty ? '' : ' — ${item.note}'}',
+                '${waiting ? '•' : '✓'} ${infoRequestLabel(item)}${item.note.isEmpty ? '' : ' — ${item.note}'}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ),
+          if (!waiting) ...[
+            const SizedBox(height: 12),
+            AppText(
+              "Borrower's response",
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 4),
+            app.borrowerResponse.isEmpty
+                ? AppText(
+                    'Not provided',
+                    style: const TextStyle(
+                      color: Colors.white38,
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                : Text(
+                    app.borrowerResponse,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ],
         ],
       ),
     );

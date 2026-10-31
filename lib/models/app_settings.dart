@@ -932,6 +932,7 @@ class AppSettings extends ChangeNotifier {
       "Borrower's response": 'رد المقترض',
       'Requested from the borrower': 'المطلوب من المقترض',
       'Requested in the previous round': 'المطلوب في الجولة السابقة',
+      'Requested in round': 'المطلوب في الجولة',
       'Upload a new/additional document': 'رفع مستند جديد/إضافي',
       'Upload a new/additional document:': 'رفع مستند جديد/إضافي:',
       'Correct:': 'تصحيح:',
