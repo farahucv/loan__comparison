@@ -315,9 +315,10 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
         const SizedBox(height: 16),
         _receipt(a!, offer!),
       ],
-      if (schedule.isNotEmpty && a?.status == 'active') ...[
+      if (a?.status == 'active' &&
+          nextInstallment(schedule, DateTime.now()) != null) ...[
         const SizedBox(height: 16),
-        _nextInstallment(),
+        _nextInstallment(nextInstallment(schedule, DateTime.now())!),
       ],
       const SizedBox(height: 16),
       SectionCard(
@@ -432,15 +433,7 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
     );
   }
 
-  Widget _nextInstallment() {
-    final today = DateTime.now();
-    final startOfToday = DateTime(today.year, today.month, today.day);
-
-    final next = schedule.firstWhere(
-      (r) => !r.dueDate.isBefore(startOfToday),
-      orElse: () => schedule.last,
-    );
-
+  Widget _nextInstallment(RepaymentInstallment next) {
     return SectionCard(
       title: 'Next installment',
       child: Row(

@@ -9,6 +9,7 @@ import '../services/loan_request_service.dart';
 import '../services/money_format.dart';
 
 import 'borrower_ui.dart';
+import 'final_offer_summary.dart';
 import 'journey_navigation.dart';
 import 'journey_ui.dart' show bankLogoFor;
 
@@ -237,6 +238,11 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         request.dtiRatio != null &&
         request.eligibilityClassification != null;
 
+    // Once the bank has issued a final offer, its numbers replace the
+    // preliminary estimate made at request time.
+    final journeyOffer = _journeyFor(request).offer;
+    final finalOffer = isFinalOffer(journeyOffer) ? journeyOffer : null;
+
     Color statusColor;
     IconData statusIcon;
     String statusTitle;
@@ -301,7 +307,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                     AppText(request.offerName, style: white(11, c: kCyan)),
                     const SizedBox(height: 3),
                     AppText(
-                      '${AppSettings.instance.tr(request.loanType)} • ${formatSar(request.requestedAmount, decimals: 0)}',
+                      '${AppSettings.instance.tr(request.loanType)} • ${requestedApprovedLine(request.requestedAmount, finalOffer)}',
                       style: white(10, c: Colors.white54),
                     ),
                   ],
@@ -338,117 +344,123 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             ],
           ),
 
-          if (hasEligibility) ...[
+          if (finalOffer != null) ...[
             const SizedBox(height: 18),
-
-            AppText(
-              'Eligibility Analysis',
-              style: white(14, w: FontWeight.bold),
+            FinalOfferSummary(
+              offer: finalOffer,
+              requestedAmount: request.requestedAmount,
             ),
+          ],
 
-            const SizedBox(height: 10),
+          if (hasEligibility) ...[
+            const SizedBox(height: 12),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .04),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: .08)),
-              ),
-              child: Column(
-                children: [
-                  LayoutBuilder(
-                    builder: (_, box) {
-                      final items = [
-                        _eligibilityMetric(
-                          'Eligibility Score',
-                          '${request.eligibilityScore!.toStringAsFixed(0)}%',
-                        ),
-                        _eligibilityMetric(
-                          'Classification',
-                          request.eligibilityClassification!,
-                        ),
-                      ];
+            InitialEstimateSection(
+              initiallyExpanded: finalOffer == null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .08),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    LayoutBuilder(
+                      builder: (_, box) {
+                        final items = [
+                          _eligibilityMetric(
+                            'Eligibility Score',
+                            '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                          ),
+                          _eligibilityMetric(
+                            'Classification',
+                            request.eligibilityClassification!,
+                          ),
+                        ];
 
-                      if (box.maxWidth < 500) {
-                        return Column(
-                          children: [
-                            for (final item in items)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: item,
+                        if (box.maxWidth < 500) {
+                          return Column(
+                            children: [
+                              for (final item in items)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: item,
+                                  ),
                                 ),
-                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: items[0]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[1]),
                           ],
                         );
-                      }
+                      },
+                    ),
 
-                      return Row(
-                        children: [
-                          Expanded(child: items[0]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[1]),
-                        ],
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 10),
 
-                  const SizedBox(height: 10),
+                    LayoutBuilder(
+                      builder: (_, box) {
+                        final items = [
+                          _eligibilityMetric(
+                            'Monthly Installment',
+                            formatSar(request.monthlyInstallment!, decimals: 2),
+                          ),
+                          _eligibilityMetric(
+                            'DTI',
+                            '${request.dtiRatio!.toStringAsFixed(2)}%',
+                          ),
+                          _eligibilityMetric(
+                            'Installment Ratio',
+                            '${request.installmentRatio!.toStringAsFixed(2)}%',
+                          ),
+                        ];
 
-                  LayoutBuilder(
-                    builder: (_, box) {
-                      final items = [
-                        _eligibilityMetric(
-                          'Monthly Installment',
-                          formatSar(request.monthlyInstallment!, decimals: 2),
-                        ),
-                        _eligibilityMetric(
-                          'DTI',
-                          '${request.dtiRatio!.toStringAsFixed(2)}%',
-                        ),
-                        _eligibilityMetric(
-                          'Installment Ratio',
-                          '${request.installmentRatio!.toStringAsFixed(2)}%',
-                        ),
-                      ];
-
-                      if (box.maxWidth < 650) {
-                        return Column(
-                          children: [
-                            for (final item in items)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: item,
+                        if (box.maxWidth < 650) {
+                          return Column(
+                            children: [
+                              for (final item in items)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: item,
+                                  ),
                                 ),
-                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: items[0]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[1]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[2]),
                           ],
                         );
-                      }
+                      },
+                    ),
 
-                      return Row(
-                        children: [
-                          Expanded(child: items[0]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[1]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[2]),
-                        ],
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 10),
 
-                  const SizedBox(height: 10),
-
-                  AppText(
-                    'This result is a preliminary suitability indicator and does not represent final loan approval.',
-                    style: white(9, c: Colors.white54),
-                  ),
-                ],
+                    AppText(
+                      'This result is a preliminary suitability indicator and does not represent final loan approval.',
+                      style: white(9, c: Colors.white54),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

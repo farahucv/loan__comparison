@@ -998,8 +998,7 @@ class AppSettings extends ChangeNotifier {
       'Issue final offer': 'إصدار العرض النهائي',
       'Issue new offer': 'إصدار عرض جديد',
       'Issue offer': 'إصدار العرض',
-      'Issue the final offer to the borrower.':
-          'أصدر العرض النهائي للمقترض.',
+      'Issue the final offer to the borrower.': 'أصدر العرض النهائي للمقترض.',
       'The application is approved. Issue the final offer so the borrower can review the Key Facts Statement.':
           'تمت الموافقة على الطلب. أصدر العرض النهائي ليتمكن المقترض من مراجعة ملخص المعلومات الأساسية.',
       'The borrower withdrew during the cooling-off period.':
@@ -1064,6 +1063,14 @@ class AppSettings extends ChangeNotifier {
       'Starts when the funds are released': 'يبدأ عند صرف التمويل',
       'Cooling-off period — you can still withdraw until':
           'فترة التراجع — يمكنك الانسحاب حتى',
+
+      // ===== Final offer / counter-offer =====
+      'Final offer': 'العرض النهائي',
+      'Counter-offer': 'عرض معدّل',
+      'Approved': 'المعتمد',
+      'Approved amount': 'المبلغ المعتمد',
+      'Total DBR': 'إجمالي نسبة عبء الدين',
+      'Initial estimate (at request time)': 'التقدير الأولي (وقت الطلب)',
     };
 
     if (m.containsKey(value)) {

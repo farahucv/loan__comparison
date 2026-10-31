@@ -198,6 +198,27 @@ class RepaymentInstallment {
       );
 }
 
+/// The next installment to pay: the lowest-numbered installment whose due
+/// date is today or later. Null when every installment is in the past.
+/// Does not rely on the order of [schedule].
+RepaymentInstallment? nextInstallment(
+  List<RepaymentInstallment> schedule,
+  DateTime today,
+) {
+  final startOfToday = DateTime(today.year, today.month, today.day);
+
+  final sorted = [...schedule]
+    ..sort((a, b) => a.installmentNo.compareTo(b.installmentNo));
+
+  for (final row in sorted) {
+    final due = DateTime(row.dueDate.year, row.dueDate.month, row.dueDate.day);
+
+    if (!due.isBefore(startOfToday)) return row;
+  }
+
+  return null;
+}
+
 class FinancingEvent {
   final int id;
   final String offerId;

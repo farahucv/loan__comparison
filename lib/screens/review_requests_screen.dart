@@ -3,7 +3,11 @@ import '../services/error_messages.dart';
 import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
+import '../models/financing.dart';
+import '../services/financing_service.dart';
 import '../services/loan_request_service.dart';
+
+import 'final_offer_summary.dart';
 
 import 'lender_application_panel.dart';
 import 'manage_offers_screen.dart';
@@ -18,7 +22,12 @@ class ReviewRequestsScreen extends StatefulWidget {
 class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
   final LoanRequestService _requestService = LoanRequestService();
 
+  final FinancingService _financingService = FinancingService();
+
   List<LenderRequestData> requests = [];
+
+  /// request id -> latest financing offer (approved applications only)
+  Map<String, FinancingOffer?> offers = {};
 
   bool isLoading = true;
 
@@ -35,10 +44,20 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
     try {
       final data = await _requestService.getLenderRequests();
 
+      Map<String, FinancingOffer?> loadedOffers = {};
+
+      try {
+        final pipeline = await _financingService.getLenderPipeline();
+        loadedOffers = {for (final e in pipeline.entries) e.key: e.value.offer};
+      } catch (_) {
+        // The request list still works without the financing data.
+      }
+
       if (!mounted) return;
 
       setState(() {
         requests = data;
+        offers = loadedOffers;
         isLoading = false;
         errorMessage = null;
       });
@@ -300,6 +319,10 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
         request.dtiRatio != null &&
         request.eligibilityClassification != null;
 
+    // Once a final offer exists, its numbers replace the request-time estimate.
+    final latestOffer = offers[request.id];
+    final finalOffer = isFinalOffer(latestOffer) ? latestOffer : null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(22),
@@ -336,7 +359,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                     const SizedBox(height: 5),
 
                     AppText(
-                      '${request.loanType} • ${formatSar(request.requestedAmount, decimals: 0)}',
+                      '${AppSettings.instance.tr(request.loanType)} • ${requestedApprovedLine(request.requestedAmount, finalOffer)}',
                       style: const TextStyle(color: Colors.white70),
                     ),
 
@@ -411,65 +434,70 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
             ],
           ),
 
-          if (hasEligibility) ...[
+          if (finalOffer != null) ...[
             const SizedBox(height: 22),
-
-            AppText(
-              'Eligibility Analysis',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            FinalOfferSummary(
+              offer: finalOffer,
+              requestedAmount: request.requestedAmount,
             ),
+          ],
 
-            const SizedBox(height: 10),
+          if (hasEligibility) ...[
+            const SizedBox(height: 16),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: .08)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _infoBox(
-                        'Eligibility Score',
-                        '${request.eligibilityScore!.toStringAsFixed(0)}%',
-                      ),
-                      _infoBox(
-                        'Classification',
-                        request.eligibilityClassification!,
-                      ),
-                      _infoBox(
-                        'Monthly Installment',
-                        formatSar(request.monthlyInstallment!, decimals: 2),
-                      ),
-                      _infoBox(
-                        'DTI',
-                        '${request.dtiRatio!.toStringAsFixed(2)}%',
-                      ),
-                      _infoBox(
-                        'Installment Ratio',
-                        '${request.installmentRatio!.toStringAsFixed(2)}%',
-                      ),
-                    ],
+            InitialEstimateSection(
+              initiallyExpanded: finalOffer == null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .08),
                   ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _infoBox(
+                          'Eligibility Score',
+                          '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                        ),
+                        _infoBox(
+                          'Classification',
+                          request.eligibilityClassification!,
+                        ),
+                        _infoBox(
+                          'Monthly Installment',
+                          formatSar(request.monthlyInstallment!, decimals: 2),
+                        ),
+                        _infoBox(
+                          'DTI',
+                          '${request.dtiRatio!.toStringAsFixed(2)}%',
+                        ),
+                        _infoBox(
+                          'Installment Ratio',
+                          '${request.installmentRatio!.toStringAsFixed(2)}%',
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  AppText(
-                    'The eligibility result is a preliminary decision-support indicator and does not represent final loan approval.',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                ],
+                    AppText(
+                      'The eligibility result is a preliminary decision-support indicator and does not represent final loan approval.',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

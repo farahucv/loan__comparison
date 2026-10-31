@@ -168,7 +168,7 @@ class FinancingService {
         .from('repayment_schedule')
         .select()
         .eq('agreement_id', agreementId)
-        .order('installment_no');
+        .order('installment_no', ascending: true);
 
     return rows.map((r) => RepaymentInstallment.fromMap(r)).toList();
   }
@@ -180,7 +180,7 @@ class FinancingService {
         .from('financing_events')
         .select()
         .inFilter('offer_id', offerIds)
-        .order('created_at');
+        .order('created_at', ascending: true);
 
     return rows.map((r) => FinancingEvent.fromMap(r)).toList();
   }

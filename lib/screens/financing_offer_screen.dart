@@ -286,6 +286,10 @@ class _FinancingOfferScreenState extends State<FinancingOfferScreen> {
         _closedBanner(status),
         const SizedBox(height: 16),
       ],
+      if (o.principal < widget.request.requestedAmount) ...[
+        _counterOfferBanner(o),
+        const SizedBox(height: 16),
+      ],
       _installmentHero(o),
       const SizedBox(height: 16),
       _keyFacts(o),
@@ -297,6 +301,43 @@ class _FinancingOfferScreenState extends State<FinancingOfferScreen> {
       ),
       if (o.isOpen) ...[const SizedBox(height: 20), _actions()],
     ];
+  }
+
+  /// The bank approved less than the borrower asked for (a counter-offer).
+  Widget _counterOfferBanner(FinancingOffer o) {
+    final approved = formatSar(o.principal, decimals: 0);
+    final requested = formatSar(widget.request.requestedAmount, decimals: 0);
+
+    final message = AppSettings.instance.isArabic
+        ? 'وافق البنك على $approved بدلًا من $requested التي طلبتها، للحفاظ على التزاماتك الشهرية ضمن الحد المسموح.'
+        : 'The bank approved $approved instead of the $requested you requested, to keep your monthly obligations within the allowed limit.';
+
+    return SectionCard(
+      accent: Colors.amber,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: Colors.amber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  'Counter-offer',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(message, style: white(12, c: Colors.white70)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _closedBanner(String status) {
