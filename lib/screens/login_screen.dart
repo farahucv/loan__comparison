@@ -7,6 +7,7 @@ import '../models/borrower_app_state.dart';
 import 'borrower_dashboard_screen.dart';
 import 'lender_dashboard_screen.dart';
 import 'register_role_screen.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -130,6 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (error) {
       if (!mounted) return;
 
+      if (error.code == 'email_not_confirmed' ||
+          error.message.toLowerCase().contains('email not confirmed')) {
+        await _openVerifyEmail(email);
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.message),
@@ -152,6 +159,38 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  /// The account exists but the email was never confirmed: send a new
+  /// code and ask for it.
+  Future<void> _openVerifyEmail(String email) async {
+    var sent = true;
+
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+    } catch (_) {
+      // For example the rate limit: the last code may still work, and the
+      // verify screen can resend once its countdown ends.
+      sent = false;
+    }
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VerifyEmailScreen(
+          email: email,
+          fromRegistration: false,
+          note: sent
+              ? 'Your email is not verified yet — we sent you a new code.'
+              : 'Your email is not verified yet. Enter the code from your email, or request a new one.',
+        ),
+      ),
+    );
   }
 
   @override
