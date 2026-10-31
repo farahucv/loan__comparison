@@ -114,6 +114,13 @@ StageInfo stageInfo(JourneyStage stage) {
         Icons.shield_outlined,
         5,
       );
+    case JourneyStage.awaitingRelease:
+      return const StageInfo(
+        'Cooling-off ended — waiting for the bank to release your funds',
+        Colors.lightBlueAccent,
+        Icons.hourglass_top,
+        5,
+      );
     case JourneyStage.active:
       return const StageInfo(
         'Financing active',
@@ -158,6 +165,7 @@ Widget? journeyScreen(BorrowerRequestData request, BorrowerJourney journey) {
     case JourneyStage.waitingForOffer:
     case JourneyStage.offerDeclined:
     case JourneyStage.offerExpired:
+    case JourneyStage.awaitingRelease:
     case JourneyStage.active:
     case JourneyStage.withdrawn:
       return FinancingStatusScreen(request: request);

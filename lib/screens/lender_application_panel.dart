@@ -910,6 +910,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
                   agreement: a,
                   events: events,
                   waitingForOfferNote: 'Issue the final offer to the borrower.',
+                  forLender: true,
                 ),
               ],
             ),

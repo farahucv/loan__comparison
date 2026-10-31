@@ -404,6 +404,9 @@ enum JourneyStage {
   offerExpired,
   awaitingSignature,
   coolingOff,
+
+  /// Cooling-off has ended; the bank has not released the funds yet.
+  awaitingRelease,
   active,
   withdrawn,
 }
@@ -449,7 +452,9 @@ class BorrowerJourney {
           return JourneyStage.awaitingSignature;
         case 'contract_signed':
         case 'cooling_off':
-          return JourneyStage.coolingOff;
+          return a.inCoolingOff
+              ? JourneyStage.coolingOff
+              : JourneyStage.awaitingRelease;
         case 'disbursed':
         case 'active':
           return JourneyStage.active;

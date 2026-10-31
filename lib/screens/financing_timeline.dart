@@ -17,6 +17,10 @@ class FinancingTimeline extends StatelessWidget {
   /// Note under "Offer issued" while there is no offer yet.
   final String waitingForOfferNote;
 
+  /// The lender sees "Ready to release" where the borrower sees
+  /// "Waiting for the bank".
+  final bool forLender;
+
   const FinancingTimeline({
     super.key,
     required this.applicationApproved,
@@ -25,6 +29,7 @@ class FinancingTimeline extends StatelessWidget {
     required this.agreement,
     required this.events,
     this.waitingForOfferNote = 'Waiting for the bank to send your final offer.',
+    this.forLender = false,
   });
 
   DateTime? _eventAt(String type) {
@@ -125,11 +130,17 @@ class FinancingTimeline extends StatelessWidget {
       return steps;
     }
 
+    // Signed, cooling-off over, funds not released yet.
+    final awaitingRelease = a?.status == 'cooling_off' && !a!.inCoolingOff;
+
     steps.add(
       _TimelineStep(
         'Disbursed',
         at: _eventAt('disbursed') ?? a?.disbursedAt,
         done: a?.disbursedAt != null,
+        pending: awaitingRelease
+            ? (forLender ? 'Ready to release' : 'Waiting for the bank')
+            : null,
       ),
     );
 
@@ -138,6 +149,7 @@ class FinancingTimeline extends StatelessWidget {
         'Active',
         at: _eventAt('activated') ?? a?.disbursedAt,
         done: a?.status == 'active',
+        pending: 'Starts when the funds are released',
       ),
     );
 
@@ -209,6 +221,8 @@ class FinancingTimeline extends StatelessWidget {
                         Text(
                           steps[i].done
                               ? formatDateTime(steps[i].at)
+                              : steps[i].pending != null
+                              ? tr(steps[i].pending!)
                               : i == current
                               ? tr('In progress')
                               : tr('Not started'),
@@ -267,11 +281,15 @@ class _TimelineStep {
   final bool done;
   final bool failed;
 
+  /// Shown instead of "In progress" / "Not started" while not done.
+  final String? pending;
+
   const _TimelineStep(
     this.title, {
     this.at,
     this.note,
     this.done = false,
     this.failed = false,
+    this.pending,
   });
 }

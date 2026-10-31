@@ -38,6 +38,7 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
   List<RepaymentInstallment> schedule = [];
 
   bool isLoading = true;
+  bool isWithdrawing = false;
   String? errorMessage;
 
   @override
@@ -114,6 +115,110 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
     if (mounted) await _load();
   }
 
+  Future<void> _withdraw(FinancingAgreement a) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: AppText('Withdraw from agreement'),
+        content: AppText(
+          'You are within the cooling-off period, so you can withdraw without penalty. The agreement will be cancelled and no funds will be released. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: AppText('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: AppText('Yes, withdraw'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => isWithdrawing = true);
+
+    try {
+      await _financing.withdraw(a.id);
+
+      if (!mounted) return;
+
+      showInfo(context, 'You withdrew from the agreement.');
+      await _load();
+    } catch (error) {
+      if (mounted) showError(context, friendlyError(error));
+    } finally {
+      if (mounted) setState(() => isWithdrawing = false);
+    }
+  }
+
+  /// "You can still withdraw until ..." with a live countdown. When the
+  /// countdown ends the screen rebuilds into the waiting-for-the-bank state.
+  Widget _coolingOffCard(FinancingAgreement a) {
+    final ends = a.coolingOffEndsAt!;
+
+    return SectionCard(
+      accent: Colors.amberAccent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${tr('Cooling-off period — you can still withdraw until')} ${formatDateTime(ends)}',
+            style: white(13, w: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(
+                Icons.timer_outlined,
+                color: Colors.amberAccent,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              CountdownText(
+                target: ends,
+                onFinished: () => setState(() {}),
+                style: TextStyle(
+                  color: journeyText,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 46,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent),
+              ),
+              onPressed: isWithdrawing ? null : () => _withdraw(a),
+              icon: isWithdrawing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.undo),
+              label: AppText(
+                'Withdraw from agreement',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // =========================
   // UI
   // =========================
@@ -183,6 +288,11 @@ class _FinancingStatusScreenState extends State<FinancingStatusScreen> {
           ],
         ),
       ),
+      if (journey.stage == JourneyStage.coolingOff &&
+          a?.coolingOffEndsAt != null) ...[
+        const SizedBox(height: 12),
+        _coolingOffCard(a!),
+      ],
       if (canContinue) ...[
         const SizedBox(height: 12),
         SizedBox(

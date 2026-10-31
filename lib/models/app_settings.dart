@@ -1056,6 +1056,14 @@ class AppSettings extends ChangeNotifier {
           'المبلغ أكبر من الحد الأقصى لعرض القرض',
       'The admin fee is above the cap of':
           'الرسوم الإدارية أعلى من الحد الأقصى البالغ',
+
+      // ===== Waiting for the bank =====
+      'Cooling-off ended — waiting for the bank to release your funds':
+          'انتهت فترة التراجع — بانتظار البنك لصرف التمويل',
+      'Waiting for the bank': 'بانتظار البنك',
+      'Starts when the funds are released': 'يبدأ عند صرف التمويل',
+      'Cooling-off period — you can still withdraw until':
+          'فترة التراجع — يمكنك الانسحاب حتى',
     };
 
     if (m.containsKey(value)) {
