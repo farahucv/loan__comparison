@@ -117,6 +117,14 @@ class FinancingService {
     );
   }
 
+  /// Cancel an accepted offer that is not signed yet.
+  Future<void> cancelUnsigned(String agreementId) async {
+    await _supabase.rpc(
+      'rushd_cancel_unsigned',
+      params: {'p_agreement_id': agreementId},
+    );
+  }
+
   // =========================
   // READ
   // =========================
@@ -186,10 +194,20 @@ class FinancingService {
   }
 
   Future<FinancingSettings> getSettings() async {
-    final row = await _supabase
-        .from('rushd_settings')
-        .select(FinancingSettings.columns)
-        .maybeSingle();
+    Map<String, dynamic>? row;
+
+    try {
+      row = await _supabase
+          .from('rushd_settings')
+          .select(FinancingSettings.columns)
+          .maybeSingle();
+    } on PostgrestException {
+      // unsigned_lapse_days not there yet: read the rest, default the lapse.
+      row = await _supabase
+          .from('rushd_settings')
+          .select(FinancingSettings.columnsWithoutLapse)
+          .maybeSingle();
+    }
 
     return row == null
         ? const FinancingSettings()

@@ -1090,6 +1090,32 @@ class AppSettings extends ChangeNotifier {
           'تغيّرت التزاماتك الشهرية منذ إصدار هذا العرض. قبوله سيتجاوز الحد المسموح. اطلب من البنك عرضًا محدّثًا.',
       'Your monthly income is missing from your profile, so this offer cannot be accepted.':
           'الدخل الشهري غير موجود في ملفك، لذا لا يمكن قبول هذا العرض.',
+
+      // ===== Cancel / lapse an unsigned acceptance =====
+      'Cancel acceptance': 'إلغاء القبول',
+      'You have not signed yet, so you can cancel this acceptance. The offer will be cancelled and will no longer count towards your monthly obligations. Continue?':
+          'لم توقّع بعد، لذا يمكنك إلغاء هذا القبول. سيتم إلغاء العرض ولن يُحتسب ضمن التزاماتك الشهرية. هل تريد المتابعة؟',
+      'Keep it': 'الإبقاء عليه',
+      'Yes, cancel acceptance': 'نعم، ألغِ القبول',
+      'Acceptance cancelled.': 'تم إلغاء القبول.',
+      'Acceptance cancelled': 'تم إلغاء القبول',
+      'Acceptance lapsed': 'انتهت صلاحية القبول',
+      'This acceptance has lapsed': 'انتهت صلاحية هذا القبول',
+      'This acceptance has lapsed. Ask the bank for a new offer.':
+          'انتهت صلاحية هذا القبول. اطلب من البنك عرضًا جديدًا.',
+      'The agreement was not signed in time, so the acceptance lapsed. It no longer counts towards your monthly obligations. Ask the bank for a new offer.':
+          'لم يتم توقيع الاتفاقية في الوقت المحدد، لذا انتهت صلاحية القبول. لم يعد يُحتسب ضمن التزاماتك الشهرية. اطلب من البنك عرضًا جديدًا.',
+      'You cancelled this acceptance before signing. It no longer counts towards your monthly obligations. The bank may send you a new offer.':
+          'لقد ألغيت هذا القبول قبل التوقيع. لم يعد يُحتسب ضمن التزاماتك الشهرية. قد يرسل لك البنك عرضًا جديدًا.',
+      'Lapses on': 'ينتهي في',
+      'Acceptance cancelled — the bank may send a new offer':
+          'تم إلغاء القبول — قد يرسل البنك عرضًا جديدًا',
+      'The acceptance lapsed because the borrower did not sign in time.':
+          'انتهت صلاحية القبول لأن المقترض لم يوقّع في الوقت المحدد.',
+      'The borrower cancelled the acceptance before signing.':
+          'ألغى المقترض القبول قبل التوقيع.',
+      'Only an acceptance that is not signed yet can be cancelled.':
+          'يمكن إلغاء القبول غير الموقّع فقط.',
     };
 
     if (m.containsKey(value)) {

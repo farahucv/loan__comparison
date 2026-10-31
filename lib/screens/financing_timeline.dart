@@ -99,6 +99,21 @@ class FinancingTimeline extends StatelessWidget {
       ),
     );
 
+    // Accepted, then cancelled by the borrower or lapsed before signing.
+    if (a != null && a.cancelledBeforeSigning) {
+      final lapsed = events.any((e) => e.eventType == 'agreement_lapsed');
+
+      steps.add(
+        _TimelineStep(
+          lapsed ? 'Acceptance lapsed' : 'Acceptance cancelled',
+          at: _eventAt(lapsed ? 'agreement_lapsed' : 'agreement_cancelled'),
+          failed: true,
+          done: true,
+        ),
+      );
+      return steps;
+    }
+
     steps.add(
       _TimelineStep(
         'Signed',

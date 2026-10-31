@@ -666,11 +666,20 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
     }
   }
 
+  bool get _lapsed => events.any((e) => e.eventType == 'agreement_lapsed');
+
   (String, Color) _financingStatus() {
     final o = offer;
     final a = agreement;
 
     if (o == null) return ('Awaiting offer', Colors.lightBlueAccent);
+
+    if (a != null && a.cancelledBeforeSigning) {
+      return (
+        _lapsed ? 'Acceptance lapsed' : 'Acceptance cancelled',
+        Colors.white54,
+      );
+    }
 
     if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
       return ('Borrower withdrew', Colors.white54);
@@ -702,6 +711,14 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
     final a = agreement;
 
     if (o == null) return null;
+
+    if (a != null && a.cancelledBeforeSigning) {
+      return AppSettings.instance.tr(
+        _lapsed
+            ? 'The acceptance lapsed because the borrower did not sign in time.'
+            : 'The borrower cancelled the acceptance before signing.',
+      );
+    }
 
     if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
       return AppSettings.instance.tr(

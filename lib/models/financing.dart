@@ -162,6 +162,13 @@ class FinancingAgreement {
   bool get earlyDisbursementWaiver =>
       consents['early_disbursement_waiver'] == true;
 
+  /// Accepted, not signed, and cancelled (by the borrower or lapsed).
+  bool get cancelledBeforeSigning => status == 'cancelled' && signedAt == null;
+
+  /// When an unsigned acceptance lapses.
+  DateTime? signDeadline(int lapseDays) =>
+      kfsAcceptedAt?.add(Duration(days: lapseDays));
+
   bool get inCoolingOff =>
       status == 'cooling_off' &&
       coolingOffEndsAt != null &&
@@ -259,16 +266,21 @@ class SignResult {
   final String? referenceNo;
   final DateTime? coolingOffEndsAt;
 
+  /// The acceptance was not signed in time and is now cancelled.
+  final bool lapsed;
+
   SignResult({
     required this.ok,
     this.error,
     this.attemptsLeft,
     this.referenceNo,
     this.coolingOffEndsAt,
+    this.lapsed = false,
   });
 
   factory SignResult.fromMap(Map<String, dynamic> row) => SignResult(
     ok: row['ok'] == true,
+    lapsed: row['lapsed'] == true,
     error: row['error']?.toString(),
     attemptsLeft: row['attempts_left'] == null
         ? null
@@ -297,6 +309,9 @@ class FinancingSettings {
   final double dbrIncomeLimitSar;
   final double dbrTotalCapAboveLimitPct;
 
+  /// An accepted offer not signed within this many days lapses.
+  final int unsignedLapseDays;
+
   const FinancingSettings({
     this.coolingOffBusinessDays = 10,
     this.demoFastCoolingOff = false,
@@ -310,10 +325,15 @@ class FinancingSettings {
     this.dbrTotalCapPct = 45,
     this.dbrIncomeLimitSar = 25000,
     this.dbrTotalCapAboveLimitPct = 45,
+    this.unsignedLapseDays = 3,
   });
 
   /// Columns to select from rushd_settings.
-  static const String columns =
+  static const String columns = '$columnsWithoutLapse, unsigned_lapse_days';
+
+  /// Before 20261031170000_cancel_unsigned.sql there is no
+  /// unsigned_lapse_days column.
+  static const String columnsWithoutLapse =
       'cooling_off_business_days, demo_fast_cooling_off, demo_fast_cooling_off_minutes, '
       'min_term_months, max_term_months, max_offer_valid_days, '
       'admin_fee_pct, admin_fee_max_sar, '
@@ -351,6 +371,7 @@ class FinancingSettings {
         'dbr_total_cap_above_limit_pct',
         d.dbrTotalCapAboveLimitPct,
       ),
+      unsignedLapseDays: i('unsigned_lapse_days', d.unsignedLapseDays),
     );
   }
 
@@ -470,6 +491,9 @@ enum JourneyStage {
   awaitingRelease,
   active,
   withdrawn,
+
+  /// Accepted but cancelled before signing (by the borrower, or lapsed).
+  acceptanceCancelled,
 }
 
 /// Everything about one loan request after it was submitted.
@@ -520,8 +544,11 @@ class BorrowerJourney {
         case 'active':
           return JourneyStage.active;
         case 'withdrawn':
-        case 'cancelled':
           return JourneyStage.withdrawn;
+        case 'cancelled':
+          return a.cancelledBeforeSigning
+              ? JourneyStage.acceptanceCancelled
+              : JourneyStage.withdrawn;
       }
     }
 

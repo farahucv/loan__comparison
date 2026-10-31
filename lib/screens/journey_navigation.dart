@@ -135,6 +135,13 @@ StageInfo stageInfo(JourneyStage stage) {
         Icons.undo,
         5,
       );
+    case JourneyStage.acceptanceCancelled:
+      return const StageInfo(
+        'Acceptance cancelled — the bank may send a new offer',
+        Colors.white54,
+        Icons.cancel_outlined,
+        4,
+      );
   }
 }
 
@@ -168,6 +175,7 @@ Widget? journeyScreen(BorrowerRequestData request, BorrowerJourney journey) {
     case JourneyStage.awaitingRelease:
     case JourneyStage.active:
     case JourneyStage.withdrawn:
+    case JourneyStage.acceptanceCancelled:
       return FinancingStatusScreen(request: request);
   }
 }

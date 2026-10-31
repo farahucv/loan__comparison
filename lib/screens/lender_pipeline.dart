@@ -303,6 +303,9 @@ class _FinancingPipelineSectionState extends State<FinancingPipelineSection> {
 
     switch (e.stage) {
       case LenderStage.awaitingOffer:
+        if (a != null && a.cancelledBeforeSigning) {
+          return '$amount • ${tr('Acceptance cancelled')}';
+        }
         if (a?.status == 'withdrawn' || a?.status == 'cancelled') {
           return '$amount • ${tr('Borrower withdrew')}';
         }

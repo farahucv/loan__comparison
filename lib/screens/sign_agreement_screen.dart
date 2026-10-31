@@ -33,6 +33,7 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
   FinancingAgreement? agreement;
   FinancingOffer? offer;
   FinancingSettings settings = const FinancingSettings();
+  List<FinancingEvent> events = [];
 
   bool isLoading = true;
   bool isBusy = false;
@@ -71,12 +72,24 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
         // Defaults are fine for display.
       }
 
+      // Events tell a lapsed acceptance from one the borrower cancelled.
+      List<FinancingEvent> loadedEvents = [];
+
+      if (loadedAgreement != null) {
+        try {
+          loadedEvents = await _service.getEvents([loadedAgreement.offerId]);
+        } catch (_) {
+          loadedEvents = [];
+        }
+      }
+
       if (!mounted) return;
 
       setState(() {
         agreement = loadedAgreement;
         offer = loadedOffer;
         settings = loadedSettings;
+        events = loadedEvents;
         isLoading = false;
       });
     } catch (error) {
@@ -134,6 +147,17 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
 
       if (!mounted) return;
 
+      if (result.lapsed) {
+        showError(
+          context,
+          result.error ??
+              'This acceptance has lapsed. Ask the bank for a new offer.',
+        );
+        setState(() => demoCode = null);
+        await _load();
+        return;
+      }
+
       if (!result.ok) {
         final left = result.attemptsLeft ?? 0;
 
@@ -162,6 +186,53 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
       if (mounted) setState(() => isBusy = false);
     }
   }
+
+  Future<void> _cancelAcceptance() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: AppText('Cancel acceptance'),
+        content: AppText(
+          'You have not signed yet, so you can cancel this acceptance. The offer will be cancelled and will no longer count towards your monthly obligations. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: AppText('Keep it'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: AppText('Yes, cancel acceptance'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => isBusy = true);
+
+    try {
+      await _service.cancelUnsigned(widget.agreementId);
+
+      if (!mounted) return;
+
+      showInfo(context, 'Acceptance cancelled.');
+      setState(() => demoCode = null);
+      await _load();
+    } catch (error) {
+      if (mounted) showError(context, friendlyError(error));
+    } finally {
+      if (mounted) setState(() => isBusy = false);
+    }
+  }
+
+  bool get _lapsedByEvent =>
+      events.any((e) => e.eventType == 'agreement_lapsed');
 
   Future<void> _withdraw() async {
     final confirmed = await showDialog<bool>(
@@ -259,8 +330,18 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
       _summary(a, o),
       const SizedBox(height: 16),
       switch (a.status) {
-        'offer_accepted' => _signingCard(),
+        'offer_accepted' => _awaitingSignature(a),
         'contract_signed' || 'cooling_off' => _coolingOffCard(a),
+        'cancelled' when a.cancelledBeforeSigning => _endCard(
+          Colors.white54,
+          Icons.cancel_outlined,
+          _lapsedByEvent
+              ? 'This acceptance has lapsed'
+              : 'Acceptance cancelled',
+          _lapsedByEvent
+              ? 'The agreement was not signed in time, so the acceptance lapsed. It no longer counts towards your monthly obligations. Ask the bank for a new offer.'
+              : 'You cancelled this acceptance before signing. It no longer counts towards your monthly obligations. The bank may send you a new offer.',
+        ),
         'withdrawn' || 'cancelled' => _endCard(
           Colors.white54,
           Icons.undo,
@@ -313,6 +394,84 @@ class _SignAgreementScreenState extends State<SignAgreementScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Accepted, not signed: the sign-by deadline, the signing card and
+  /// "Cancel acceptance". Past the deadline the acceptance has lapsed (the
+  /// database marks it cancelled the next time it is touched).
+  Widget _awaitingSignature(FinancingAgreement a) {
+    final days = settings.unsignedLapseDays;
+    final deadline = a.signDeadline(days);
+    final lapsed = deadline != null && !DateTime.now().isBefore(deadline);
+
+    if (lapsed) {
+      return _endCard(
+        Colors.orangeAccent,
+        Icons.timer_off_outlined,
+        'This acceptance has lapsed',
+        'This acceptance has lapsed. Ask the bank for a new offer.',
+      );
+    }
+
+    final deadlineText = AppSettings.instance.isArabic
+        ? 'وقّع خلال $days أيام وإلا ستنتهي صلاحية هذا القبول'
+        : 'Sign within $days days or this acceptance lapses';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (deadline != null)
+          SectionCard(
+            accent: Colors.orangeAccent,
+            child: Row(
+              children: [
+                const Icon(Icons.timer_outlined, color: Colors.orangeAccent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(deadlineText, style: white(13, w: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${tr('Lapses on')} ${formatDateTime(deadline)}',
+                        style: white(11, c: Colors.white54),
+                      ),
+                    ],
+                  ),
+                ),
+                CountdownText(
+                  target: deadline,
+                  onFinished: () => setState(() {}),
+                  style: const TextStyle(
+                    color: Colors.orangeAccent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
+        _signingCard(),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 46,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: const BorderSide(color: Colors.redAccent),
+            ),
+            onPressed: isBusy ? null : _cancelAcceptance,
+            icon: const Icon(Icons.cancel_outlined),
+            label: AppText(
+              'Cancel acceptance',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
