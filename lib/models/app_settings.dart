@@ -907,6 +907,71 @@ class AppSettings extends ChangeNotifier {
           'لا يمكن أن تكون الرسوم الإدارية سالبة',
       'The admin fee must be less than the amount':
           'يجب أن تكون الرسوم الإدارية أقل من المبلغ',
+
+      // ===== National Address =====
+      'National Address': 'العنوان الوطني',
+      'District': 'الحي',
+      'Street': 'الشارع',
+      'Building number': 'رقم المبنى',
+      'Postal code': 'الرمز البريدي',
+      'Additional number (optional)': 'الرقم الإضافي (اختياري)',
+      'Short address (optional)': 'العنوان المختصر (اختياري)',
+      'Please enter your district.': 'يرجى إدخال الحي.',
+      'Please enter your street.': 'يرجى إدخال الشارع.',
+      'Building number must be 4 digits.':
+          'يجب أن يتكون رقم المبنى من 4 أرقام.',
+      'Postal code must be 5 digits.': 'يجب أن يتكون الرمز البريدي من 5 أرقام.',
+      'Additional number must be 4 digits.':
+          'يجب أن يتكون الرقم الإضافي من 4 أرقام.',
+      'Short address must be 4 letters and 4 digits (e.g. RRRD2929).':
+          'يجب أن يتكون العنوان المختصر من 4 حروف و4 أرقام (مثل RRRD2929).',
+      'Not provided': 'غير مُدخل',
+
+      // ===== Request more information =====
+      'Round': 'الجولة',
+      "Borrower's response": 'رد المقترض',
+      'Requested from the borrower': 'المطلوب من المقترض',
+      'Requested in the previous round': 'المطلوب في الجولة السابقة',
+      'Upload a new/additional document': 'رفع مستند جديد/إضافي',
+      'Upload a new/additional document:': 'رفع مستند جديد/إضافي:',
+      'Correct:': 'تصحيح:',
+      'Other information': 'معلومات أخرى',
+      'Note for the borrower (optional)': 'ملاحظة للمقترض (اختياري)',
+      'Choose exactly what the borrower must provide. At least one item is required.':
+          'حدد بدقة ما يجب على المقترض تقديمه. يجب اختيار عنصر واحد على الأقل.',
+      'Fields to correct': 'الحقول المطلوب تصحيحها',
+      'General message (optional)': 'رسالة عامة (اختياري)',
+      'Full name': 'الاسم الكامل',
+      'Job title': 'المسمى الوظيفي',
+      'Sector': 'القطاع',
+      'Years at job': 'سنوات العمل',
+      'Upload a new document:': 'رفع مستند جديد:',
+      'Update:': 'تحديث:',
+      'Answer the bank in your response': 'أجب البنك في ردك',
+      'Only the items below can be changed. Complete each one, write a short response, then resubmit.':
+          'يمكن تعديل العناصر أدناه فقط. أكمل كل عنصر واكتب ردًا مختصرًا ثم أعد الإرسال.',
+      'Requested by the bank': 'مطلوب من البنك',
+      'Write your response to the bank': 'اكتب ردك إلى البنك',
+      'Your identity details are unchanged; verify them once to continue.':
+          'لم تتغير بيانات هويتك؛ تحقق منها مرة واحدة للمتابعة.',
+      'Other document': 'مستند آخر',
+      'Upload the requested file': 'ارفع الملف المطلوب',
+      'Your response to the bank': 'ردك إلى البنك',
+      'Explain what you changed or uploaded for each requested item.':
+          'وضّح ما عدّلته أو رفعته لكل عنصر مطلوب.',
+      'Complete every item the bank asked for before resubmitting.':
+          'أكمل جميع العناصر التي طلبها البنك قبل إعادة الإرسال.',
+      'Please write your response to the bank.': 'يرجى كتابة ردك إلى البنك.',
+      'Request at least one item from the borrower':
+          'اطلب عنصرًا واحدًا على الأقل من المقترض',
+      'Information requests can only be sent with a request for more information':
+          'لا يمكن إرسال طلبات المعلومات إلا مع طلب معلومات إضافية',
+      'Information requests must be a list of document, field or other items':
+          'يجب أن تكون طلبات المعلومات قائمة من المستندات أو الحقول أو عناصر أخرى',
+      'The borrower cannot change the information requests':
+          'لا يمكن للمقترض تغيير طلبات المعلومات',
+      'The review round is set automatically':
+          'يتم تحديد جولة المراجعة تلقائيًا',
     };
 
     if (m.containsKey(value)) {

@@ -16,6 +16,10 @@ import 'journey_ui.dart';
 /// Step after the lender approves a request: the borrower completes the
 /// loan application in four steps (identity, employment & income,
 /// documents, review & consents) and follows the bank's review.
+///
+/// When the bank asks for more information, only the requested items can
+/// be changed, and resubmitting needs every requested item done plus a
+/// response to the bank.
 class LoanApplicationScreen extends StatefulWidget {
   final BorrowerRequestData request;
 
@@ -26,6 +30,58 @@ class LoanApplicationScreen extends StatefulWidget {
 }
 
 enum _DocStatus { missing, uploaded, accepted, needsReupload }
+
+/// The Saudi National Address, stored in loan_applications.address as one
+/// line: "Building 2929, King Fahd Rd, Al Olaya, 12211, Add. 7788 (RRRD2929)".
+class _NationalAddress {
+  final String building;
+  final String street;
+  final String district;
+  final String postalCode;
+  final String additional;
+  final String shortAddress;
+
+  const _NationalAddress({
+    this.building = '',
+    this.street = '',
+    this.district = '',
+    this.postalCode = '',
+    this.additional = '',
+    this.shortAddress = '',
+  });
+
+  static final RegExp _line = RegExp(
+    r'^Building (\d{4}), (.+), ([^,]+), (\d{5})(?:, Add\. (\d{4}))?(?: \(([A-Za-z]{4}\d{4})\))?$',
+  );
+
+  /// If the line is not in the expected format, all of it goes in Street.
+  factory _NationalAddress.parse(String line) {
+    final text = line.trim();
+    final m = _line.firstMatch(text);
+
+    if (m == null) return _NationalAddress(street: text);
+
+    return _NationalAddress(
+      building: m[1]!,
+      street: m[2]!,
+      district: m[3]!,
+      postalCode: m[4]!,
+      additional: m[5] ?? '',
+      shortAddress: (m[6] ?? '').toUpperCase(),
+    );
+  }
+
+  String format() {
+    final buffer = StringBuffer(
+      'Building $building, $street, $district, $postalCode',
+    );
+
+    if (additional.isNotEmpty) buffer.write(', Add. $additional');
+    if (shortAddress.isNotEmpty) buffer.write(' ($shortAddress)');
+
+    return buffer.toString();
+  }
+}
 
 class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   static const List<String> _docCategories = [
@@ -48,6 +104,19 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     'Review & consents',
   ];
 
+  /// Which step each requestable field is on.
+  static const Map<String, int> _fieldStep = {
+    'full_name': 0,
+    'national_id': 0,
+    'date_of_birth': 0,
+    'address': 0,
+    'employer': 1,
+    'job_title': 1,
+    'employment_sector': 1,
+    'years_at_job': 1,
+    'iban': 1,
+  };
+
   static const int _maxFileBytes = 5 * 1024 * 1024;
 
   final LoanApplicationService _service = LoanApplicationService();
@@ -55,10 +124,17 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   final nameController = TextEditingController();
   final nationalIdController = TextEditingController();
   final cityController = TextEditingController();
+  final districtController = TextEditingController();
+  final streetController = TextEditingController();
+  final buildingController = TextEditingController();
+  final postalController = TextEditingController();
+  final additionalController = TextEditingController();
+  final shortAddressController = TextEditingController();
   final employerController = TextEditingController();
   final jobTitleController = TextEditingController();
   final yearsController = TextEditingController();
   final ibanController = TextEditingController();
+  final responseController = TextEditingController();
 
   DateTime? dateOfBirth;
   String? sector;
@@ -78,6 +154,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   /// category -> why the last file was refused
   final Map<String, String> refused = {};
 
+  /// Fields that were empty or invalid in the saved application. They stay
+  /// editable during a resubmission even if the bank did not ask for them.
+  final Set<String> _initiallyMissing = {};
+
   bool consentBureau = false;
   bool consentAccurate = false;
   bool consentSimulation = false;
@@ -90,6 +170,26 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   bool get _editable =>
       application == null || application!.status == 'more_info_required';
+
+  bool get _moreInfo => application?.status == 'more_info_required';
+
+  List<InfoRequestItem> get _requests =>
+      _moreInfo ? application!.infoRequests : const [];
+
+  Set<String> get _requestedFields => {
+    for (final r in _requests)
+      if (r.type == 'field') r.field,
+  };
+
+  /// Document card for a requested category ('Bank Statement' is the
+  /// 3-month statement card).
+  String _cardFor(String category) =>
+      category == 'Bank Statement' ? '3-Month Bank Statement' : category;
+
+  Set<String> get _requestedCards => {
+    for (final r in _requests)
+      if (r.type == 'document') _cardFor(r.category),
+  };
 
   String get _identityKey =>
       '${nameController.text.trim()}|${nationalIdController.text.trim()}|${dateOfBirth?.toIso8601String()}';
@@ -108,10 +208,17 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       nameController,
       nationalIdController,
       cityController,
+      districtController,
+      streetController,
+      buildingController,
+      postalController,
+      additionalController,
+      shortAddressController,
       employerController,
       jobTitleController,
       yearsController,
       ibanController,
+      responseController,
     ]) {
       c.dispose();
     }
@@ -144,12 +251,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
       if (!mounted) return;
 
+      pending.clear();
+      refused.clear();
       _fill(app);
 
       setState(() {
         application = app;
         contact = bank;
         monthlyIncome = income;
+        step = _firstRequestedStep();
         isLoading = false;
       });
     } catch (error) {
@@ -173,6 +283,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }
 
   void _fill(LoanApplicationData? app) {
+    _initiallyMissing.clear();
+    responseController.clear();
+
     if (app == null) {
       final state = BorrowerAppState.instance;
 
@@ -194,10 +307,169 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ? app.employmentSector
         : null;
 
+    final address = _NationalAddress.parse(app.address);
+    buildingController.text = address.building;
+    streetController.text = address.street;
+    districtController.text = address.district;
+    postalController.text = address.postalCode;
+    additionalController.text = address.additional;
+    shortAddressController.text = address.shortAddress;
+
     ibanEditing = !saudiIban.hasMatch(normalizeIban(app.iban));
 
     if (app.consents['identity_verified_simulated'] == true) {
       _verifiedFor = _identityKey;
+    }
+
+    // Saved values that do not pass today's checks (e.g. an application
+    // made before the National Address existed).
+    if (nameController.text.trim().isEmpty) _initiallyMissing.add('full_name');
+    if (!RegExp(r'^[12]\d{9}$').hasMatch(app.nationalId.trim())) {
+      _initiallyMissing.add('national_id');
+    }
+    if (dateOfBirth == null) _initiallyMissing.add('date_of_birth');
+    if (_addressError() != null) _initiallyMissing.add('address');
+    if (app.employer.trim().isEmpty) _initiallyMissing.add('employer');
+    if (sector == null) _initiallyMissing.add('employment_sector');
+    if (!saudiIban.hasMatch(normalizeIban(app.iban))) {
+      _initiallyMissing.add('iban');
+    }
+  }
+
+  /// During a resubmission only requested (or missing) fields can change.
+  bool _canEdit(String field) {
+    if (application == null) return true;
+    if (!_moreInfo) return false;
+
+    return _requestedFields.contains(field) ||
+        _initiallyMissing.contains(field);
+  }
+
+  bool _canUpload(String card) {
+    if (application == null) return true;
+    if (!_moreInfo) return false;
+
+    return _requestedCards.contains(card) ||
+        (_existingFor(card).isEmpty && card != 'Other');
+  }
+
+  int _firstRequestedStep() {
+    if (_requests.isEmpty) return 0;
+
+    var first = _steps.length - 1;
+
+    for (final r in _requests) {
+      final s = switch (r.type) {
+        'field' => _fieldStep[r.field] ?? 3,
+        'document' => 2,
+        _ => 3,
+      };
+
+      if (s < first) first = s;
+    }
+
+    return first;
+  }
+
+  // =========================
+  // NATIONAL ADDRESS
+  // =========================
+
+  _NationalAddress get _address => _NationalAddress(
+    building: buildingController.text.trim(),
+    street: streetController.text.trim(),
+    district: districtController.text.trim(),
+    postalCode: postalController.text.trim(),
+    additional: additionalController.text.trim(),
+    shortAddress: shortAddressController.text.trim().toUpperCase(),
+  );
+
+  String? _addressError() {
+    final a = _address;
+
+    if (cityController.text.trim().isEmpty) return 'Please enter your city.';
+    if (a.district.isEmpty) return 'Please enter your district.';
+    if (a.street.isEmpty) return 'Please enter your street.';
+
+    if (!RegExp(r'^\d{4}$').hasMatch(a.building)) {
+      return 'Building number must be 4 digits.';
+    }
+
+    if (!RegExp(r'^\d{5}$').hasMatch(a.postalCode)) {
+      return 'Postal code must be 5 digits.';
+    }
+
+    if (a.additional.isNotEmpty && !RegExp(r'^\d{4}$').hasMatch(a.additional)) {
+      return 'Additional number must be 4 digits.';
+    }
+
+    if (a.shortAddress.isNotEmpty &&
+        !RegExp(r'^[A-Z]{4}\d{4}$').hasMatch(a.shortAddress)) {
+      return 'Short address must be 4 letters and 4 digits (e.g. RRRD2929).';
+    }
+
+    return null;
+  }
+
+  // =========================
+  // REQUESTED ITEMS
+  // =========================
+
+  bool _fieldChanged(String field) {
+    final app = application;
+
+    if (app == null) return true;
+
+    switch (field) {
+      case 'full_name':
+        return nameController.text.trim() != app.fullName.trim();
+      case 'national_id':
+        return nationalIdController.text.trim() != app.nationalId.trim();
+      case 'date_of_birth':
+        final a = dateOfBirth;
+        final b = app.dateOfBirth;
+        if (a == null || b == null) return a != b;
+        return a.year != b.year || a.month != b.month || a.day != b.day;
+      case 'address':
+        return _address.format() != app.address.trim() ||
+            cityController.text.trim() != app.city.trim();
+      case 'employer':
+        return employerController.text.trim() != app.employer.trim();
+      case 'job_title':
+        return jobTitleController.text.trim() != app.jobTitle.trim();
+      case 'employment_sector':
+        return (sector ?? '') != app.employmentSector;
+      case 'years_at_job':
+        return double.tryParse(yearsController.text.trim()) != app.yearsAtJob;
+      case 'iban':
+        return normalizeIban(ibanController.text) != normalizeIban(app.iban);
+      default:
+        return false;
+    }
+  }
+
+  bool _itemDone(InfoRequestItem item) {
+    switch (item.type) {
+      case 'document':
+        return _pendingFor(_cardFor(item.category)).isNotEmpty;
+      case 'field':
+        return _fieldChanged(item.field);
+      default:
+        return responseController.text.trim().isNotEmpty;
+    }
+  }
+
+  bool get _allRequestsDone =>
+      _requests.every(_itemDone) && responseController.text.trim().isNotEmpty;
+
+  String _itemLabel(InfoRequestItem item) {
+    switch (item.type) {
+      case 'document':
+        return '${tr('Upload a new document:')} ${tr(item.category)}';
+      case 'field':
+        return '${tr('Update:')} ${tr(infoRequestFields[item.field] ?? item.field)}';
+      default:
+        return tr('Answer the bank in your response');
     }
   }
 
@@ -205,7 +477,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   // VALIDATION
   // =========================
 
-  int? _age(DateTime dob) {
+  int _age(DateTime dob) {
     final now = DateTime.now();
     var age = now.year - dob.year;
 
@@ -228,9 +500,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
     if (dateOfBirth == null) return 'Please enter your date of birth.';
 
-    if ((_age(dateOfBirth!) ?? 0) < 18) {
-      return 'You must be at least 18 years old.';
-    }
+    if (_age(dateOfBirth!) < 18) return 'You must be at least 18 years old.';
 
     return null;
   }
@@ -242,9 +512,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
         if (basics != null) return basics;
 
-        if (cityController.text.trim().isEmpty) {
-          return 'Please enter your city.';
-        }
+        final address = _addressError();
+
+        if (address != null) return address;
 
         if (!_identityVerified) return 'Please verify your identity first.';
 
@@ -294,6 +564,16 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           return 'Please accept all the required consents.';
         }
 
+        if (_moreInfo) {
+          if (!_requests.every(_itemDone)) {
+            return 'Complete every item the bank asked for before resubmitting.';
+          }
+
+          if (responseController.text.trim().isEmpty) {
+            return 'Please write your response to the bank.';
+          }
+        }
+
         return null;
     }
   }
@@ -310,7 +590,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }
 
   void _goTo(int index) {
-    // Only allow jumping forward over steps that are complete.
     for (var i = 0; i < index; i++) {
       final error = _stepError(i);
 
@@ -426,13 +705,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         lenderId: widget.request.lenderId,
         existing: application,
         newDocuments: List.of(pending),
+        borrowerResponse: _moreInfo ? responseController.text : null,
         fields: {
           'full_name': nameController.text.trim(),
           'national_id': nationalIdController.text.trim(),
           'date_of_birth':
               '${dob.year.toString().padLeft(4, '0')}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}',
           'city': cityController.text.trim(),
-          'address': application?.address ?? '',
+          'address': _address.format(),
           'employer': employerController.text.trim(),
           'employment_sector': sector,
           'job_title': jobTitleController.text.trim(),
@@ -451,11 +731,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
       if (!mounted) return;
 
-      pending.clear();
       showInfo(context, 'Application sent to the bank for review.');
 
       setState(() {
-        step = 0;
         consentBureau = false;
         consentAccurate = false;
         consentSimulation = false;
@@ -522,6 +800,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   _DocStatus _statusFor(String card) {
     if (refused.containsKey(card)) return _DocStatus.needsReupload;
 
+    if (_requestedCards.contains(card) && _pendingFor(card).isEmpty) {
+      return _DocStatus.needsReupload;
+    }
+
     final has = _existingFor(card).isNotEmpty || _pendingFor(card).isNotEmpty;
 
     if (!has) return _DocStatus.missing;
@@ -569,8 +851,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   List<Widget> _stepper() {
     return [
-      if (application != null) ...[
-        _statusCard(application!),
+      if (_moreInfo) ...[
+        _moreInfoBanner(application!),
         const SizedBox(height: 16),
       ],
       const DemoNote('Use test data — do not enter your real ID or IBAN.'),
@@ -589,6 +871,121 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       const SizedBox(height: 18),
       _navButtons(),
     ];
+  }
+
+  Widget _moreInfoBanner(LoanApplicationData app) {
+    return SectionCard(
+      accent: Colors.orangeAccent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.orangeAccent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: AppText(
+                  'The bank needs more information',
+                  style: white(15, w: FontWeight.bold),
+                ),
+              ),
+              StatusChip(
+                label: '${tr('Round')} ${app.reviewRound}',
+                color: Colors.orangeAccent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          AppText(
+            'Only the items below can be changed. Complete each one, write a short response, then resubmit.',
+            style: white(12, c: Colors.white70),
+          ),
+          if (app.lenderMessage.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    'Message from the bank',
+                    style: white(10, c: Colors.white54),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    app.lenderMessage,
+                    style: TextStyle(color: journeyText, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          AppText(
+            'Requested by the bank',
+            style: white(12, w: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          for (final item in _requests) _checklistLine(item),
+          _checklistLine(
+            null,
+            done: responseController.text.trim().isNotEmpty,
+            label: tr('Write your response to the bank'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _checklistLine(InfoRequestItem? item, {bool? done, String? label}) {
+    final isDone = done ?? _itemDone(item!);
+
+    return InkWell(
+      onTap: item == null
+          ? () => setState(() => step = 3)
+          : () => setState(
+              () => step = switch (item.type) {
+                'field' => _fieldStep[item.field] ?? 3,
+                'document' => 2,
+                _ => 3,
+              },
+            ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+              size: 18,
+              color: isDone ? Colors.greenAccent : Colors.orangeAccent,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label ?? _itemLabel(item!),
+                    style: white(
+                      12,
+                      w: FontWeight.w600,
+                      c: isDone ? Colors.white54 : Colors.white,
+                    ),
+                  ),
+                  if (item != null && item.note.isNotEmpty)
+                    Text(item.note, style: white(11, c: Colors.white54)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _progress() {
@@ -671,6 +1068,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   Widget _navButtons() {
     final last = step == _steps.length - 1;
     final consentsDone = consentBureau && consentAccurate && consentSimulation;
+    final ready = consentsDone && (!_moreInfo || _allRequestsDone);
 
     return Row(
       children: [
@@ -697,7 +1095,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: isSaving || (last && !consentsDone)
+            onPressed: isSaving || (last && !ready)
                 ? null
                 : (last ? _submit : _next),
             child: isSaving
@@ -727,22 +1125,29 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   Widget _identityStep() {
     final verified = _identityVerified;
+    final identityLocked =
+        !_canEdit('full_name') &&
+        !_canEdit('national_id') &&
+        !_canEdit('date_of_birth');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _row(
-          _field('Full Name', nameController),
+          _field('Full Name', nameController, fieldKey: 'full_name'),
           _field(
             'National ID / Iqama Number',
             nationalIdController,
+            fieldKey: 'national_id',
             digitsOnly: true,
             maxLength: 10,
             hint: '1XXXXXXXXX',
           ),
         ),
         const SizedBox(height: 12),
-        _row(_dateField(), _field('City', cityController)),
+        _row(_dateField(), const SizedBox.shrink()),
+        const SizedBox(height: 20),
+        _addressSection(),
         const SizedBox(height: 18),
         Container(
           padding: const EdgeInsets.all(14),
@@ -804,6 +1209,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 'In a live service this step uses the national digital-identity platform.',
                 style: white(10, c: Colors.white54),
               ),
+              if (_moreInfo && identityLocked && !verified) ...[
+                const SizedBox(height: 4),
+                AppText(
+                  'Your identity details are unchanged; verify them once to continue.',
+                  style: white(10, c: Colors.white54),
+                ),
+              ],
             ],
           ),
         ),
@@ -811,23 +1223,122 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
+  Widget _addressSection() {
+    final requested = _moreInfo && _requestedFields.contains('address');
+    final readOnly = !_canEdit('address');
+
+    Widget f(
+      String label,
+      TextEditingController c, {
+      bool digits = false,
+      int? maxLength,
+      String? hint,
+      bool upper = false,
+    }) => _field(
+      label,
+      c,
+      readOnlyOverride: readOnly,
+      requestedOverride: requested,
+      digitsOnly: digits,
+      maxLength: maxLength,
+      hint: hint,
+      upperCase: upper,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .03),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: requested
+              ? Colors.orangeAccent
+              : Colors.white.withValues(alpha: .08),
+          width: requested ? 1.6 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined, color: kCyan, size: 18),
+              const SizedBox(width: 6),
+              Expanded(
+                child: AppText(
+                  'National Address',
+                  style: white(13, w: FontWeight.bold),
+                ),
+              ),
+              if (requested) const _RequestedTag(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _row(f('City', cityController), f('District', districtController)),
+          const SizedBox(height: 12),
+          _row(
+            f('Street', streetController),
+            f(
+              'Building number',
+              buildingController,
+              digits: true,
+              maxLength: 4,
+              hint: '2929',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _row(
+            f(
+              'Postal code',
+              postalController,
+              digits: true,
+              maxLength: 5,
+              hint: '12211',
+            ),
+            f(
+              'Additional number (optional)',
+              additionalController,
+              digits: true,
+              maxLength: 4,
+              hint: '7788',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _row(
+            f(
+              'Short address (optional)',
+              shortAddressController,
+              maxLength: 8,
+              hint: 'RRRD2929',
+              upper: true,
+            ),
+            const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _dateField() {
+    final requested = _moreInfo && _requestedFields.contains('date_of_birth');
+    final readOnly = !_canEdit('date_of_birth');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          'Date of birth',
-          style: white(11, w: FontWeight.bold, c: Colors.white70),
-        ),
+        _label('Date of birth', requested),
         const SizedBox(height: 7),
         InkWell(
-          onTap: _pickDateOfBirth,
+          onTap: readOnly ? null : _pickDateOfBirth,
           borderRadius: BorderRadius.circular(9),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .10),
+              color: Colors.white.withValues(alpha: readOnly ? .05 : .10),
               borderRadius: BorderRadius.circular(9),
+              border: requested
+                  ? Border.all(color: Colors.orangeAccent, width: 1.6)
+                  : null,
             ),
             child: Row(
               children: [
@@ -839,7 +1350,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                         )
                       : Text(formatDate(dateOfBirth), style: white(13)),
                 ),
-                const Icon(Icons.calendar_today, size: 16, color: kCyan),
+                Icon(
+                  readOnly ? Icons.lock_outline : Icons.calendar_today,
+                  size: 16,
+                  color: readOnly ? Colors.white38 : kCyan,
+                ),
               ],
             ),
           ),
@@ -851,42 +1366,59 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   // ---- step 2 ----
 
   Widget _employmentStep() {
+    final sectorRequested =
+        _moreInfo && _requestedFields.contains('employment_sector');
+    final sectorLocked = !_canEdit('employment_sector');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _row(
-          _field('Employer', employerController),
-          _field('Job Title', jobTitleController),
+          _field('Employer', employerController, fieldKey: 'employer'),
+          _field('Job Title', jobTitleController, fieldKey: 'job_title'),
         ),
         const SizedBox(height: 14),
-        AppText(
-          'Employment sector',
-          style: white(11, w: FontWeight.bold, c: Colors.white70),
-        ),
+        _label('Employment sector', sectorRequested),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final entry in _sectors.entries)
-              ChoiceChip(
-                label: AppText(
-                  entry.value,
-                  style: TextStyle(
-                    color: sector == entry.key ? Colors.white : journeyText,
-                    fontSize: 12,
+        Container(
+          padding: sectorRequested ? const EdgeInsets.all(8) : EdgeInsets.zero,
+          decoration: sectorRequested
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orangeAccent, width: 1.6),
+                )
+              : null,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in _sectors.entries)
+                ChoiceChip(
+                  label: AppText(
+                    entry.value,
+                    style: TextStyle(
+                      color: sector == entry.key ? Colors.white : journeyText,
+                      fontSize: 12,
+                    ),
                   ),
+                  selected: sector == entry.key,
+                  selectedColor: kBlue,
+                  backgroundColor: Colors.white.withValues(alpha: .08),
+                  onSelected: sectorLocked
+                      ? null
+                      : (_) => setState(() => sector = entry.key),
                 ),
-                selected: sector == entry.key,
-                selectedColor: kBlue,
-                backgroundColor: Colors.white.withValues(alpha: .08),
-                onSelected: (_) => setState(() => sector = entry.key),
-              ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         _row(
-          _field('Years at Current Job', yearsController, decimal: true),
+          _field(
+            'Years at Current Job',
+            yearsController,
+            fieldKey: 'years_at_job',
+            decimal: true,
+          ),
           _salaryBox(),
         ),
         const SizedBox(height: 14),
@@ -901,10 +1433,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          'Monthly salary',
-          style: white(11, w: FontWeight.bold, c: Colors.white70),
-        ),
+        _label('Monthly salary', false),
         const SizedBox(height: 7),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -941,21 +1470,23 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   Widget _ibanField() {
     final value = normalizeIban(ibanController.text);
     final valid = saudiIban.hasMatch(value);
+    final requested = _moreInfo && _requestedFields.contains('iban');
+    final readOnly = !_canEdit('iban');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          'Salary account IBAN',
-          style: white(11, w: FontWeight.bold, c: Colors.white70),
-        ),
+        _label('Salary account IBAN', requested),
         const SizedBox(height: 7),
-        if (!ibanEditing && valid)
+        if ((!ibanEditing || readOnly) && valid)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .10),
               borderRadius: BorderRadius.circular(9),
+              border: requested
+                  ? Border.all(color: Colors.orangeAccent, width: 1.6)
+                  : null,
             ),
             child: Row(
               children: [
@@ -974,11 +1505,21 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: tr('Edit'),
-                  onPressed: () => setState(() => ibanEditing = true),
-                  icon: const Icon(Icons.edit, size: 18, color: kCyan),
-                ),
+                if (readOnly)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: 16,
+                      color: Colors.white38,
+                    ),
+                  )
+                else
+                  IconButton(
+                    tooltip: tr('Edit'),
+                    onPressed: () => setState(() => ibanEditing = true),
+                    icon: const Icon(Icons.edit, size: 18, color: kCyan),
+                  ),
               ],
             ),
           )
@@ -992,6 +1533,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             },
             child: TextField(
               controller: ibanController,
+              readOnly: readOnly,
               maxLength: 29,
               textCapitalization: TextCapitalization.characters,
               autocorrect: false,
@@ -1008,6 +1550,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               style: white(13),
               decoration: _inputDecoration(
                 hint: 'SA0000000000000000000000',
+                requested: requested,
+                readOnly: readOnly,
                 error: value.isNotEmpty && !valid && value.length >= 24
                     ? tr(
                         'IBAN must be SA followed by 22 digits (24 characters).',
@@ -1028,6 +1572,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   // ---- step 3 ----
 
   Widget _documentsStep() {
+    final showOther = _requestedCards.contains('Other');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1037,10 +1583,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         const SizedBox(height: 12),
         for (final category in _docCategories) ...[
-          _documentCard(category, editable: true),
+          _documentCard(category, editable: _canUpload(category)),
           const SizedBox(height: 12),
         ],
-        if (_otherDocuments.isNotEmpty) _otherDocumentsList(),
+        if (showOther) ...[
+          _documentCard('Other', editable: true),
+          const SizedBox(height: 12),
+        ],
+        if (_otherDocuments.isNotEmpty && !showOther) _otherDocumentsList(),
       ],
     );
   }
@@ -1076,15 +1626,30 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   Widget _documentCard(String category, {required bool editable}) {
     final status = _statusFor(category);
-    final existing = _existingFor(category);
+    final existing = category == 'Other'
+        ? _otherDocuments
+        : _existingFor(category);
     final waiting = _pendingFor(category);
+    final requested = _moreInfo && _requestedCards.contains(category);
 
-    final borderColor = switch (status) {
-      _DocStatus.missing => Colors.white24,
-      _DocStatus.uploaded => kCyan.withValues(alpha: .5),
-      _DocStatus.accepted => Colors.greenAccent.withValues(alpha: .5),
-      _DocStatus.needsReupload => Colors.orangeAccent.withValues(alpha: .6),
-    };
+    final notes = [
+      for (final r in _requests)
+        if (r.type == 'document' &&
+            _cardFor(r.category) == category &&
+            r.note.isNotEmpty)
+          r.note,
+    ];
+
+    final borderColor = requested
+        ? Colors.orangeAccent
+        : switch (status) {
+            _DocStatus.missing => Colors.white24,
+            _DocStatus.uploaded => kCyan.withValues(alpha: .5),
+            _DocStatus.accepted => Colors.greenAccent.withValues(alpha: .5),
+            _DocStatus.needsReupload => Colors.orangeAccent.withValues(
+              alpha: .6,
+            ),
+          };
 
     return InkWell(
       onTap: editable ? () => _pickFile(category) : null,
@@ -1094,7 +1659,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: .04),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 1.4),
+          border: Border.all(color: borderColor, width: requested ? 1.8 : 1.4),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1110,13 +1675,31 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: AppText(
-                    category,
+                    category == 'Other' ? 'Other document' : category,
                     style: white(14, w: FontWeight.bold),
                   ),
                 ),
                 _statusChip(status),
               ],
             ),
+            if (requested) ...[
+              const SizedBox(height: 8),
+              const Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _RequestedTag(),
+              ),
+              for (final note in notes)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    note,
+                    style: const TextStyle(
+                      color: Colors.orangeAccent,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
             if (refused[category] != null) ...[
               const SizedBox(height: 8),
               AppText(
@@ -1157,7 +1740,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     const Icon(Icons.add, color: kCyan, size: 18),
                     const SizedBox(width: 6),
                     AppText(
-                      existing.isEmpty && waiting.isEmpty
+                      requested
+                          ? 'Upload the requested file'
+                          : existing.isEmpty && waiting.isEmpty
                           ? 'Tap to choose a file'
                           : 'Add another file',
                       style: const TextStyle(color: kCyan, fontSize: 12),
@@ -1220,6 +1805,25 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ..._summary(editLinks: true, maskSensitive: false),
+        if (_moreInfo) ...[
+          const SizedBox(height: 8),
+          _label('Your response to the bank', true),
+          const SizedBox(height: 7),
+          TextField(
+            controller: responseController,
+            maxLines: 4,
+            maxLength: 1000,
+            onChanged: (_) => setState(() {}),
+            style: white(13),
+            decoration: _inputDecoration(
+              hint: tr(
+                'Explain what you changed or uploaded for each requested item.',
+              ),
+              requested: true,
+              readOnly: false,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         AppText('Consents', style: white(14, w: FontWeight.bold)),
         const SizedBox(height: 6),
@@ -1238,6 +1842,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           consentSimulation,
           (v) => setState(() => consentSimulation = v),
         ),
+        if (_moreInfo && !_allRequestsDone)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: AppText(
+              'Complete every item the bank asked for before resubmitting.',
+              style: const TextStyle(color: Colors.orangeAccent, fontSize: 12),
+            ),
+          ),
       ],
     );
   }
@@ -1260,10 +1872,15 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }) {
     final id = nationalIdController.text.trim();
     final iban = normalizeIban(ibanController.text);
+    final address = _addressError() == null
+        ? _address.format()
+        : (application?.address ?? '');
 
     String maskId(String v) => v.length < 4
         ? v
         : '${v.substring(0, 1)}••••••${v.substring(v.length - 3)}';
+
+    String orDash(String v) => v.trim().isEmpty ? '-' : v.trim();
 
     Widget group(String title, int stepIndex, List<Widget> rows) {
       return Container(
@@ -1301,10 +1918,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
     return [
       group('Identity', 0, [
-        InfoRow('Full Name', nameController.text.trim()),
-        InfoRow('National ID / Iqama Number', maskSensitive ? maskId(id) : id),
+        InfoRow('Full Name', orDash(nameController.text)),
+        InfoRow(
+          'National ID / Iqama Number',
+          orDash(maskSensitive ? maskId(id) : id),
+        ),
         InfoRow('Date of birth', formatDate(dateOfBirth)),
-        InfoRow('City', cityController.text.trim(), translateValue: true),
+        InfoRow('City', orDash(cityController.text)),
+        InfoRow('National Address', orDash(address)),
         InfoRow(
           'Identity check',
           _identityVerified ? 'Verified (simulated)' : 'Not verified',
@@ -1312,24 +1933,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
       ]),
       group('Employment & income', 1, [
-        InfoRow('Employer', employerController.text.trim()),
+        InfoRow('Employer', orDash(employerController.text)),
         InfoRow(
           'Employment sector',
           sector == null ? '-' : _sectors[sector]!,
           translateValue: true,
         ),
-        InfoRow(
-          'Job Title',
-          jobTitleController.text.trim().isEmpty
-              ? '-'
-              : jobTitleController.text.trim(),
-        ),
-        InfoRow(
-          'Years at Current Job',
-          yearsController.text.trim().isEmpty
-              ? '-'
-              : yearsController.text.trim(),
-        ),
+        InfoRow('Job Title', orDash(jobTitleController.text)),
+        InfoRow('Years at Current Job', orDash(yearsController.text)),
         InfoRow(
           'Monthly salary',
           (monthlyIncome ?? 0) > 0 ? formatSar(monthlyIncome) : '-',
@@ -1384,6 +1995,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
           ),
         ),
       ],
+      if (app.borrowerResponse.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        SectionCard(
+          title: 'Your response to the bank',
+          child: Text(app.borrowerResponse, style: white(12)),
+        ),
+      ],
       const SizedBox(height: 16),
       SectionCard(
         title: 'Your Information',
@@ -1431,13 +2049,6 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         title = 'APPLICATION NOT APPROVED';
         message = 'The bank could not approve your application.';
         break;
-      case 'more_info_required':
-        color = Colors.orangeAccent;
-        icon = Icons.error_outline;
-        title = 'ACTION REQUIRED';
-        message =
-            'The bank needs more information. Update your details or add documents, then resubmit.';
-        break;
       default:
         color = Colors.amberAccent;
         icon = Icons.schedule;
@@ -1464,6 +2075,11 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   ),
                 ),
               ),
+              if (app.reviewRound > 1)
+                StatusChip(
+                  label: '${tr('Round')} ${app.reviewRound}',
+                  color: color,
+                ),
             ],
           ),
           const SizedBox(height: 10),
@@ -1543,7 +2159,13 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     return LayoutBuilder(
       builder: (_, box) {
         if (box.maxWidth < 520) {
-          return Column(children: [a, const SizedBox(height: 12), b]);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              a,
+              if (b is! SizedBox) ...[const SizedBox(height: 12), b],
+            ],
+          );
         }
 
         return Row(
@@ -1558,42 +2180,86 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     );
   }
 
-  InputDecoration _inputDecoration({String? hint, String? error}) {
+  Widget _label(String text, bool requested) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        AppText(
+          text,
+          style: white(11, w: FontWeight.bold, c: Colors.white70),
+        ),
+        if (requested) const _RequestedTag(),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    String? hint,
+    String? error,
+    bool requested = false,
+    bool readOnly = false,
+  }) {
+    final side = requested
+        ? const BorderSide(color: Colors.orangeAccent, width: 1.6)
+        : BorderSide.none;
+
     return InputDecoration(
       counterText: '',
       hintText: hint,
       hintStyle: white(12, c: Colors.white38),
       errorText: error,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: .10),
+      fillColor: Colors.white.withValues(alpha: readOnly ? .05 : .10),
+      suffixIcon: readOnly
+          ? const Icon(Icons.lock_outline, size: 16, color: Colors.white38)
+          : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(9),
-        borderSide: BorderSide.none,
+        borderSide: side,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: side,
       ),
     );
   }
 
+  /// [fieldKey] is the loan_applications column; during a resubmission it
+  /// decides whether the field is editable and highlighted.
   Widget _field(
     String label,
     TextEditingController controller, {
+    String? fieldKey,
+    bool? readOnlyOverride,
+    bool? requestedOverride,
     bool digitsOnly = false,
     bool decimal = false,
+    bool upperCase = false,
     int? maxLength,
     String? hint,
   }) {
+    final readOnly =
+        readOnlyOverride ?? (fieldKey != null && !_canEdit(fieldKey));
+    final requested =
+        requestedOverride ??
+        (_moreInfo && fieldKey != null && _requestedFields.contains(fieldKey));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          label,
-          style: white(11, w: FontWeight.bold, c: Colors.white70),
-        ),
+        _label(label, requested),
         const SizedBox(height: 7),
         TextField(
           controller: controller,
+          readOnly: readOnly,
           maxLength: maxLength,
           onChanged: (_) => setState(() {}),
+          textCapitalization: upperCase
+              ? TextCapitalization.characters
+              : TextCapitalization.none,
           keyboardType: digitsOnly
               ? TextInputType.number
               : decimal
@@ -1603,11 +2269,29 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               ? [FilteringTextInputFormatter.digitsOnly]
               : decimal
               ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+              : upperCase
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]'))]
               : null,
           style: white(13),
-          decoration: _inputDecoration(hint: hint),
+          decoration: _inputDecoration(
+            hint: hint,
+            requested: requested,
+            readOnly: readOnly,
+          ),
         ),
       ],
     );
   }
+}
+
+/// Small orange "Requested by the bank" label.
+class _RequestedTag extends StatelessWidget {
+  const _RequestedTag();
+
+  @override
+  Widget build(BuildContext context) => const StatusChip(
+    label: 'Requested by the bank',
+    color: Colors.orangeAccent,
+    icon: Icons.flag_outlined,
+  );
 }
