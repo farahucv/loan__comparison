@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/app_settings.dart';
@@ -37,6 +38,15 @@ class RushdApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Rushd',
         themeMode: settings.isDark ? ThemeMode.dark : ThemeMode.light,
+
+        // Arabic for Flutter's own widgets too (date picker, tooltips, menus).
+        locale: settings.isArabic ? const Locale('ar') : const Locale('en'),
+        supportedLocales: const [Locale('en'), Locale('ar')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
 
         theme: ThemeData(
           fontFamily: 'Arial',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -122,7 +123,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                         const SizedBox(height: 6),
 
                         AppText(
-                          'Showing available ${state.loanType.toLowerCase()} offers for your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
+                          AppSettings.instance.isArabic
+                              ? 'عرض العروض المتاحة لـ${AppSettings.instance.tr(state.loanType)} لمبلغك المطلوب ${formatSar(state.amount, decimals: 0)}.'
+                              : 'Showing available ${state.loanType.toLowerCase()} offers for your requested amount of ${formatSar(state.amount, decimals: 0)}.',
                           style: white(12, c: Colors.white54),
                         ),
                       ],
@@ -156,15 +159,15 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     final items = [
                       metric(
                         'Monthly Income',
-                        'SAR ${state.income.toStringAsFixed(0)}',
+                        formatSar(state.income, decimals: 0),
                       ),
                       metric(
                         'Monthly Expenses',
-                        'SAR ${state.expenses.toStringAsFixed(0)}',
+                        formatSar(state.expenses, decimals: 0),
                       ),
                       metric(
                         'Requested Amount',
-                        'SAR ${state.amount.toStringAsFixed(0)}',
+                        formatSar(state.amount, decimals: 0),
                       ),
                     ];
 
@@ -386,8 +389,14 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
             runSpacing: 10,
             children: [
               _mini('Rate', '${offer.interestRate}%'),
-              _mini('Term', '${offer.term} months'),
-              _mini('Max Amount', 'SAR ${offer.amount}'),
+              _mini(
+                'Term',
+                '${offer.term} ${AppSettings.instance.tr('months')}',
+              ),
+              _mini(
+                'Max Amount',
+                formatSar(double.tryParse(offer.amount), decimals: 0),
+              ),
             ],
           ),
 
@@ -431,7 +440,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     children: [
                       _mini(
                         'Monthly Installment',
-                        'SAR ${eligibility.monthlyInstallment.toStringAsFixed(2)}',
+                        formatSar(eligibility.monthlyInstallment, decimals: 2),
                       ),
                       _mini(
                         'DTI',
@@ -505,7 +514,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
           const SizedBox(height: 7),
 
           AppText(
-            'There are currently no active ${state.loanType.toLowerCase()} offers that support your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
+            AppSettings.instance.isArabic
+                ? 'لا توجد حاليًا عروض ${AppSettings.instance.tr(state.loanType)} نشطة تدعم مبلغك المطلوب ${formatSar(state.amount, decimals: 0)}.'
+                : 'There are currently no active ${state.loanType.toLowerCase()} offers that support your requested amount of ${formatSar(state.amount, decimals: 0)}.',
             textAlign: TextAlign.center,
             style: white(11, c: Colors.white54),
           ),

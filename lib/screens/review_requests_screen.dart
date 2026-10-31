@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../services/loan_request_service.dart';
@@ -67,7 +68,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: AppText(
             newStatus == 'approved'
                 ? 'Request approved successfully.'
                 : 'Request rejected.',
@@ -207,7 +208,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                           const Spacer(),
 
                           IconButton(
-                            tooltip: 'Refresh',
+                            tooltip: AppSettings.instance.tr('Refresh'),
                             onPressed: _loadRequests,
                             icon: const Icon(
                               Icons.refresh,
@@ -266,7 +267,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
             ElevatedButton(
               onPressed: _loadRequests,
-              child: const Text('Try Again'),
+              child: AppText('Try Again'),
             ),
           ],
         ),
@@ -335,7 +336,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                     const SizedBox(height: 5),
 
                     AppText(
-                      '${request.loanType} • SAR ${request.requestedAmount.toStringAsFixed(0)}',
+                      '${request.loanType} • ${formatSar(request.requestedAmount, decimals: 0)}',
                       style: const TextStyle(color: Colors.white70),
                     ),
 
@@ -393,19 +394,19 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
             children: [
               _infoBox(
                 'Monthly Income',
-                'SAR ${request.monthlyIncome.toStringAsFixed(0)}',
+                formatSar(request.monthlyIncome, decimals: 0),
               ),
               _infoBox(
                 'Current Monthly Obligations',
-                'SAR ${request.existingDebts.toStringAsFixed(0)}',
+                formatSar(request.existingDebts, decimals: 0),
               ),
               _infoBox(
                 'Monthly Expenses',
-                'SAR ${request.monthlyExpenses.toStringAsFixed(0)}',
+                formatSar(request.monthlyExpenses, decimals: 0),
               ),
               _infoBox(
                 'Requested Amount',
-                'SAR ${request.requestedAmount.toStringAsFixed(0)}',
+                formatSar(request.requestedAmount, decimals: 0),
               ),
             ],
           ),
@@ -449,7 +450,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                       ),
                       _infoBox(
                         'Monthly Installment',
-                        'SAR ${request.monthlyInstallment!.toStringAsFixed(2)}',
+                        formatSar(request.monthlyInstallment!, decimals: 2),
                       ),
                       _infoBox(
                         'DTI',
@@ -490,7 +491,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   ),
                   onPressed: () => _showApproveDialog(request),
                   icon: const Icon(Icons.check, color: Colors.white),
-                  label: const Text(
+                  label: AppText(
                     'Approve',
                     style: TextStyle(color: Colors.white),
                   ),
@@ -504,7 +505,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   ),
                   onPressed: () => _showRejectDialog(request),
                   icon: const Icon(Icons.close, color: Colors.white),
-                  label: const Text(
+                  label: AppText(
                     'Reject',
                     style: TextStyle(color: Colors.white),
                   ),
@@ -522,20 +523,20 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Approve Request'),
-          content: const Text('Are you sure you want to approve this request?'),
+          title: AppText('Approve Request'),
+          content: AppText('Are you sure you want to approve this request?'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text('Cancel'),
+              child: AppText('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('Yes, Approve'),
+              child: AppText('Yes, Approve'),
             ),
           ],
         );
@@ -554,14 +555,16 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Reject Request'),
+          title: AppText('Reject Request'),
           content: TextField(
             controller: reasonController,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Rejection Reason',
-              hintText: 'Enter the reason for rejection',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppSettings.instance.tr('Rejection Reason'),
+              hintText: AppSettings.instance.tr(
+                'Enter the reason for rejection',
+              ),
+              border: const OutlineInputBorder(),
             ),
           ),
           actions: [
@@ -569,13 +572,13 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text('Cancel'),
+              child: AppText('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('Yes, Reject'),
+              child: AppText('Yes, Reject'),
             ),
           ],
         );
@@ -589,7 +592,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a rejection reason.')),
+          SnackBar(content: AppText('Please enter a rejection reason.')),
         );
 
         reasonController.dispose();

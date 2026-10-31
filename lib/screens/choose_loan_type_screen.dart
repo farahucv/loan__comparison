@@ -21,25 +21,61 @@ class ChooseLoanTypeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppText('Choose Loan Type', textAlign: TextAlign.center, style: white(30, w: FontWeight.w900)),
+                  AppText(
+                    'Choose Loan Type',
+                    textAlign: TextAlign.center,
+                    style: white(30, w: FontWeight.w900),
+                  ),
                   const SizedBox(height: 10),
-                  AppText('This helps Rushd show relevant offers and recommendations.', textAlign: TextAlign.center, style: white(13, c: Colors.white54)),
+                  AppText(
+                    'This helps Rushd show relevant offers and recommendations.',
+                    textAlign: TextAlign.center,
+                    style: white(13, c: Colors.white54),
+                  ),
                   const SizedBox(height: 34),
                   LayoutBuilder(
                     builder: (context, box) {
                       final cards = [
-                        _type(context, Icons.credit_card, 'Personal Loan', 'For individual financing needs.', state.loanType == 'Personal Loan'),
-                        _type(context, Icons.business_center_outlined, 'Business Loan', 'For small businesses and business owners.', state.loanType == 'Business Loan'),
-                        _type(context, Icons.trending_up, 'Investment Loan', 'For users seeking financing for investment purposes.', state.loanType == 'Investment Loan'),
+                        _type(
+                          context,
+                          Icons.credit_card,
+                          'Personal Loan',
+                          'For individual financing needs.',
+                          state.loanType == 'Personal Loan',
+                        ),
+                        _type(
+                          context,
+                          Icons.business_center_outlined,
+                          'Business Loan',
+                          'For small businesses and business owners.',
+                          state.loanType == 'Business Loan',
+                        ),
+                        _type(
+                          context,
+                          Icons.trending_up,
+                          'Investment Loan',
+                          'For users seeking financing for investment purposes.',
+                          state.loanType == 'Investment Loan',
+                        ),
                       ];
                       if (box.maxWidth < 760) {
-                        return Column(children: [for (final card in cards) Padding(padding: const EdgeInsets.only(bottom: 16), child: card)]);
+                        return Column(
+                          children: [
+                            for (final card in cards)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: card,
+                              ),
+                          ],
+                        );
                       }
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: cards[0]), const SizedBox(width: 16),
-                          Expanded(child: cards[1]), const SizedBox(width: 16),
+                          Expanded(child: cards[0]),
+                          const SizedBox(width: 16),
+                          Expanded(child: cards[1]),
+                          const SizedBox(width: 16),
                           Expanded(child: cards[2]),
                         ],
                       );
@@ -54,7 +90,13 @@ class ChooseLoanTypeScreen extends StatelessWidget {
     );
   }
 
-  Widget _type(BuildContext context, IconData icon, String title, String description, bool active) {
+  Widget _type(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String description,
+    bool active,
+  ) {
     return InkWell(
       onTap: () {
         BorrowerAppState.instance.selectLoanType(title);
@@ -65,9 +107,13 @@ class ChooseLoanTypeScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: active ? const Color(0xff17205C) : Colors.white.withValues(alpha: .09),
+          color: active
+              ? const Color(0xff17205C)
+              : Colors.white.withValues(alpha: .09),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? kBlue : Colors.white.withValues(alpha: .06)),
+          border: Border.all(
+            color: active ? kBlue : Colors.white.withValues(alpha: .06),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -72,7 +72,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: AppText(
             status == 'approved'
                 ? 'Application approved.'
                 : status == 'rejected'
@@ -139,7 +139,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       if (!mounted) return null;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please write a message first.')),
+        SnackBar(content: AppText('Please write a message first.')),
       );
 
       return null;
@@ -205,7 +205,9 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Could not open the document: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Could not open the document:')} ${friendlyError(error)}',
+          ),
         ),
       );
     }
@@ -224,7 +226,9 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Number copied: $phone')),
+        SnackBar(
+          content: Text('${AppSettings.instance.tr('Number copied:')} $phone'),
+        ),
       );
     }
   }
@@ -262,7 +266,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
                 ),
               ),
               IconButton(
-                tooltip: 'Refresh',
+                tooltip: AppSettings.instance.tr('Refresh'),
                 onPressed: _load,
                 icon: const Icon(Icons.refresh, color: Colors.white70),
               ),
@@ -311,9 +315,27 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
           children: [
             _box('Full Name', app.fullName),
             _box('National ID / Iqama', app.nationalId),
+            _box(
+              'Date of birth',
+              app.dateOfBirth == null
+                  ? '-'
+                  : '${app.dateOfBirth!.day.toString().padLeft(2, '0')}/${app.dateOfBirth!.month.toString().padLeft(2, '0')}/${app.dateOfBirth!.year}',
+            ),
             _box('City', app.city),
             _box('Address', app.address.isEmpty ? '-' : app.address),
             _box('Employer', app.employer),
+            _box(
+              'Employment sector',
+              AppSettings.instance.tr(
+                const {
+                      'government': 'Government',
+                      'private': 'Private sector',
+                      'military': 'Military',
+                      'retired': 'Retired',
+                    }[app.employmentSector] ??
+                    '-',
+              ),
+            ),
             _box('Job Title', app.jobTitle.isEmpty ? '-' : app.jobTitle),
             _box(
               'Years at Current Job',
@@ -356,8 +378,11 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.description_outlined,
-                    color: Colors.lightBlue, size: 20),
+                const Icon(
+                  Icons.description_outlined,
+                  color: Colors.lightBlue,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -401,7 +426,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
               child: AppText(
                 widget.request.borrowerPhone.isEmpty
                     ? 'No phone number saved for this borrower.'
-                    : 'Borrower phone: ${widget.request.borrowerPhone}',
+                    : '${AppSettings.instance.tr('Borrower phone:')} ${widget.request.borrowerPhone}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ),
@@ -417,7 +442,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
         if (app.lenderMessage.isNotEmpty) ...[
           const SizedBox(height: 12),
           AppText(
-            'Your message: ${app.lenderMessage}',
+            '${AppSettings.instance.tr('Your message:')} ${app.lenderMessage}',
             style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
         ],
@@ -438,8 +463,7 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
                 ),
               ),
               ElevatedButton.icon(
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                 onPressed: isBusy ? null : _askMoreInfo,
                 icon: const Icon(Icons.help_outline, color: Colors.white),
                 label: Text(
@@ -448,8 +472,9 @@ class _LenderApplicationPanelState extends State<LenderApplicationPanel> {
                 ),
               ),
               ElevatedButton.icon(
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                ),
                 onPressed: isBusy ? null : _reject,
                 icon: const Icon(Icons.close, color: Colors.white),
                 label: Text(

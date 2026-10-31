@@ -54,6 +54,14 @@ class LoanApplicationData {
   final double? yearsAtJob;
   final String iban;
   final String notes;
+  final DateTime? dateOfBirth;
+
+  /// government | private | military | retired
+  final String employmentSector;
+
+  /// credit_bureau_check, info_accurate, simulation_ack,
+  /// identity_verified_simulated, accepted_at
+  final Map<String, dynamic> consents;
 
   final List<LoanDocument> documents;
 
@@ -76,6 +84,9 @@ class LoanApplicationData {
     required this.yearsAtJob,
     required this.iban,
     required this.notes,
+    required this.dateOfBirth,
+    required this.employmentSector,
+    required this.consents,
     required this.documents,
     required this.status,
     required this.lenderMessage,
@@ -111,6 +122,11 @@ class LoanApplicationData {
           : double.tryParse(row['years_at_job'].toString()),
       iban: row['iban']?.toString() ?? '',
       notes: row['notes']?.toString() ?? '',
+      dateOfBirth: DateTime.tryParse(row['date_of_birth']?.toString() ?? ''),
+      employmentSector: row['employment_sector']?.toString() ?? '',
+      consents: row['consents'] is Map
+          ? Map<String, dynamic>.from(row['consents'] as Map)
+          : <String, dynamic>{},
       documents: docs,
       status: row['status']?.toString() ?? 'submitted',
       lenderMessage: row['lender_message']?.toString() ?? '',
@@ -160,6 +176,23 @@ class LoanApplicationService {
     if (row == null) return null;
 
     return LoanApplicationData.fromMap(row);
+  }
+
+  /// Borrower's monthly income from the financial profile (step 2 of the
+  /// application shows it read-only).
+  Future<double?> getMonthlyIncome() async {
+    final row = await _supabase
+        .from('borrower_profiles')
+        .select('monthly_income')
+        .eq('user_id', _uid)
+        .maybeSingle();
+
+    final value = row?['monthly_income'];
+
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+
+    return double.tryParse(value.toString());
   }
 
   /// Borrower: request id -> application status (for the Request Status list).

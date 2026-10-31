@@ -60,7 +60,9 @@ class BorrowerShell extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error signing out:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -74,62 +76,10 @@ class BorrowerShell extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            Container(
-              height: 78,
-              padding: const EdgeInsets.symmetric(horizontal: 80),
-              decoration: BoxDecoration(
-                color: const Color(0xff130022).withValues(alpha: .55),
-                border: Border(
-                  bottom: BorderSide(color: Colors.white.withValues(alpha: .06)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    'assets/images/rushd_log.png',
-                    width: 150,
-                    errorBuilder: (_, _, _) =>
-                        AppText('Rushd', style: white(22, w: FontWeight.bold)),
-                  ),
-
-                  const Spacer(),
-
-                  _nav(context, 'Home', 0),
-
-                  const SizedBox(width: 34),
-
-                  _nav(context, 'Loan Options', 1),
-
-                  const SizedBox(width: 34),
-
-                  _nav(context, 'Request Status', 2),
-
-                  const SizedBox(width: 34),
-
-                  _nav(context, 'My Profile', 3),
-
-                  const Spacer(),
-
-                  OutlinedButton(
-                    onPressed: () => _signOut(context),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: .08),
-                      side: BorderSide(color: Colors.white.withValues(alpha: .12)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: AppText(
-                      'Sign Out',
-                      style: white(12, w: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
+            LayoutBuilder(
+              builder: (context, box) => box.maxWidth < 860
+                  ? _compactHeader(context)
+                  : _wideHeader(context),
             ),
 
             Expanded(child: child),
@@ -139,24 +89,139 @@ class BorrowerShell extends StatelessWidget {
     ),
   );
 
+  BoxDecoration get _headerDecoration => BoxDecoration(
+    color: const Color(0xff130022).withValues(alpha: .55),
+    border: Border(
+      bottom: BorderSide(color: Colors.white.withValues(alpha: .06)),
+    ),
+  );
+
+  /// Phones and narrow windows: logo + menu.
+  Widget _compactHeader(BuildContext context) {
+    const items = ['Home', 'Loan Options', 'Request Status', 'My Profile'];
+
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: _headerDecoration,
+      child: Row(
+        children: [
+          Image.asset(
+            'assets/images/rushd_log.png',
+            width: 110,
+            errorBuilder: (_, _, _) =>
+                AppText('Rushd', style: white(20, w: FontWeight.bold)),
+          ),
+
+          const Spacer(),
+
+          PopupMenuButton<int>(
+            tooltip: AppSettings.instance.tr('Menu'),
+            icon: const Icon(Icons.menu, color: Colors.white),
+            color: const Color(0xff1E0B36),
+            onSelected: (i) {
+              if (i == 4) {
+                _signOut(context);
+              } else {
+                _go(context, i);
+              }
+            },
+            itemBuilder: (_) => [
+              for (var i = 0; i < items.length; i++)
+                PopupMenuItem(
+                  value: i,
+                  child: Text(
+                    AppSettings.instance.tr(items[i]),
+                    style: TextStyle(
+                      color: i == active ? kCyan : Colors.white,
+                      fontWeight: i == active
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 4,
+                child: Text(
+                  AppSettings.instance.tr('Sign Out'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _wideHeader(BuildContext context) => Container(
+    height: 78,
+    padding: const EdgeInsets.symmetric(horizontal: 80),
+    decoration: _headerDecoration,
+    child: Row(
+      children: [
+        Image.asset(
+          'assets/images/rushd_log.png',
+          width: 150,
+          errorBuilder: (_, _, _) =>
+              AppText('Rushd', style: white(22, w: FontWeight.bold)),
+        ),
+
+        const Spacer(),
+
+        _nav(context, 'Home', 0),
+
+        const SizedBox(width: 34),
+
+        _nav(context, 'Loan Options', 1),
+
+        const SizedBox(width: 34),
+
+        _nav(context, 'Request Status', 2),
+
+        const SizedBox(width: 34),
+
+        _nav(context, 'My Profile', 3),
+
+        const Spacer(),
+
+        OutlinedButton(
+          onPressed: () => _signOut(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: .08),
+            side: BorderSide(color: Colors.white.withValues(alpha: .12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          ),
+          child: AppText('Sign Out', style: white(12, w: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+
+  void _go(BuildContext context, int i) {
+    if (i == 0) {
+      Navigator.pushReplacementNamed(context, '/borrowerDashboard');
+    }
+
+    if (i == 1) {
+      Navigator.pushReplacementNamed(context, '/chooseLoanType');
+    }
+
+    if (i == 2) {
+      Navigator.pushReplacementNamed(context, '/requestStatus');
+    }
+
+    if (i == 3) {
+      Navigator.pushReplacementNamed(context, '/borrowerProfile');
+    }
+  }
+
   Widget _nav(BuildContext context, String t, int i) => InkWell(
-    onTap: () {
-      if (i == 0) {
-        Navigator.pushReplacementNamed(context, '/borrowerDashboard');
-      }
-
-      if (i == 1) {
-        Navigator.pushReplacementNamed(context, '/chooseLoanType');
-      }
-
-      if (i == 2) {
-        Navigator.pushReplacementNamed(context, '/requestStatus');
-      }
-
-      if (i == 3) {
-        Navigator.pushReplacementNamed(context, '/borrowerProfile');
-      }
-    },
+    onTap: () => _go(context, i),
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: AppText(

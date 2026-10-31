@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
+        SnackBar(content: AppText('Please enter email and password')),
       );
       return;
     }
@@ -213,7 +213,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                     ),
                     child: Column(
                       children: [
@@ -222,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText: "Email",
+                            hintText: AppSettings.instance.tr("Email"),
                             hintStyle: const TextStyle(color: Colors.white60),
                             prefixIcon: const Icon(
                               Icons.email_outlined,
@@ -248,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: hidePassword,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText: "Password",
+                            hintText: AppSettings.instance.tr("Password"),
                             hintStyle: const TextStyle(color: Colors.white60),
                             prefixIcon: const Icon(
                               Icons.lock_outline,

@@ -144,7 +144,7 @@ class _SecureLoanAssessmentScreenState
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+      SnackBar(content: AppText(message), backgroundColor: Colors.redAccent),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../models/loan_offer.dart';
@@ -54,7 +55,9 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading offers: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error loading offers:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -76,7 +79,9 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error signing out:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -90,22 +95,22 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete Offer'),
+          title: AppText('Delete Offer'),
           content: Text(
-            'Are you sure you want to delete "${offerToDelete.offerName}"?',
+            '${AppSettings.instance.tr('Are you sure you want to delete this offer?')}\n${offerToDelete.offerName}',
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text('Cancel'),
+              child: AppText('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('Delete'),
+              child: AppText('Delete'),
             ),
           ],
         );
@@ -126,7 +131,11 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Offer '${offerToDelete.offerName}' deleted")),
+        SnackBar(
+          content: Text(
+            '${AppSettings.instance.tr('Offer deleted:')} ${offerToDelete.offerName}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
@@ -328,7 +337,9 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
                                     margin: const EdgeInsets.only(bottom: 15),
                                     padding: const EdgeInsets.all(24),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
+                                      ),
                                       borderRadius: BorderRadius.circular(25),
                                     ),
                                     child: Row(
@@ -352,7 +363,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
                                               const SizedBox(height: 8),
 
                                               AppText(
-                                                "${offer.bankName} • ${offer.amount} SAR • ${offer.loanType}",
+                                                "${offer.bankName} • ${formatSar(double.tryParse(offer.amount), decimals: 0)} • ${offer.loanType}",
                                                 style: const TextStyle(
                                                   color: Colors.white60,
                                                   fontSize: 13,
@@ -362,7 +373,7 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
                                               const SizedBox(height: 4),
 
                                               AppText(
-                                                "Rate: ${offer.interestRate}% • Term: ${offer.term} months",
+                                                '${AppSettings.instance.tr('Rate:')} ${offer.interestRate}% • ${AppSettings.instance.tr('Term:')} ${offer.term} ${AppSettings.instance.tr('months')}',
                                                 style: const TextStyle(
                                                   color: Colors.white54,
                                                   fontSize: 12,

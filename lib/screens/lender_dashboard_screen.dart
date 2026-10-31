@@ -147,7 +147,9 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading dashboard: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error loading dashboard:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -168,7 +170,9 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading statistics: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error loading statistics:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -191,7 +195,9 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error signing out: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error signing out:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -334,206 +340,223 @@ class _LenderDashboardScreenState extends State<LenderDashboardScreen> {
                     : !isVerified
                     ? _pendingVerification()
                     : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 20,
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      bool isMobile = constraints.maxWidth < 900;
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 20,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            bool isMobile = constraints.maxWidth < 900;
 
-                      return Flex(
-                        direction: isMobile ? Axis.vertical : Axis.horizontal,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // =========================
-                          // LEFT PANEL
-                          // =========================
+                            return Flex(
+                              direction: isMobile
+                                  ? Axis.vertical
+                                  : Axis.horizontal,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // =========================
+                                // LEFT PANEL
+                                // =========================
 
-                          Flexible(
-                            flex: isMobile ? 0 : 5,
-                            child: Container(
-                              padding: const EdgeInsets.all(30),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 6,
-                                    ),
+                                Flexible(
+                                  flex: isMobile ? 0 : 5,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(30),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(20),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      borderRadius: BorderRadius.circular(25),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(
-                                          Icons.lock_outline,
-                                          color: Colors.white60,
-                                          size: 14,
-                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.lock_outline,
+                                                color: Colors.white60,
+                                                size: 14,
+                                              ),
 
-                                        const SizedBox(width: 6),
+                                              const SizedBox(width: 6),
 
-                                        AppText(
-                                          "Lender Representative Dashboard",
-                                          style: const TextStyle(
-                                            color: Colors.white60,
-                                            fontSize: 12,
+                                              AppText(
+                                                "Lender Representative Dashboard",
+                                                style: const TextStyle(
+                                                  color: Colors.white60,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
+
+                                        const SizedBox(height: 25),
+
+                                        AppText(
+                                          "Welcome,\n${widget.lenderName}",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 34,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.2,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 20),
+
+                                        Container(
+                                          width: 170,
+                                          height: 85,
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.08,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
+                                          ),
+                                          child: Image.asset(
+                                            getBankLogo(widget.bankName),
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 35),
+
+                                        if (isLoadingOffers)
+                                          const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        else
+                                          Column(
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  _statCard(
+                                                    "Active Offers",
+                                                    stats?.activeOffers
+                                                            .toString() ??
+                                                        "0",
+                                                  ),
+
+                                                  const SizedBox(width: 10),
+
+                                                  _statCard(
+                                                    "Bank Requests",
+                                                    stats?.submittedRequests
+                                                            .toString() ??
+                                                        "0",
+                                                  ),
+                                                ],
+                                              ),
+
+                                              const SizedBox(height: 10),
+
+                                              Row(
+                                                children: [
+                                                  _statCard(
+                                                    "Pending Requests",
+                                                    stats?.pendingRequests
+                                                            .toString() ??
+                                                        "0",
+                                                  ),
+
+                                                  const SizedBox(width: 10),
+
+                                                  _statCard(
+                                                    "Average Rate",
+                                                    "${stats?.averageRate.toStringAsFixed(2) ?? '0'}%",
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                       ],
                                     ),
                                   ),
-
-                                  const SizedBox(height: 25),
-
-                                  AppText(
-                                    "Welcome,\n${widget.lenderName}",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.2,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  Container(
-                                    width: 170,
-                                    height: 85,
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                    child: Image.asset(
-                                      getBankLogo(widget.bankName),
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 35),
-
-                                  if (isLoadingOffers)
-                                    const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                  else
-                                    Column(
-                                      children: [
-                                        Row(
-                                          children: [
-                                            _statCard(
-                                              "Active Offers",
-                                              stats?.activeOffers.toString() ??
-                                                  "0",
-                                            ),
-
-                                            const SizedBox(width: 10),
-
-                                            _statCard(
-                                              "Bank Requests",
-                                              stats?.submittedRequests
-                                                      .toString() ??
-                                                  "0",
-                                            ),
-                                          ],
-                                        ),
-
-                                        const SizedBox(height: 10),
-
-                                        Row(
-                                          children: [
-                                            _statCard(
-                                              "Pending Requests",
-                                              stats?.pendingRequests
-                                                      .toString() ??
-                                                  "0",
-                                            ),
-
-                                            const SizedBox(width: 10),
-
-                                            _statCard(
-                                              "Average Rate",
-                                              "${stats?.averageRate.toStringAsFixed(2) ?? '0'}%",
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(
-                            width: isMobile ? 0 : 25,
-                            height: isMobile ? 25 : 0,
-                          ),
-
-                          // =========================
-                          // RIGHT PANEL
-                          // =========================
-                          Flexible(
-                            flex: isMobile ? 0 : 6,
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _actionCard(
-                                        context,
-                                        title: "Manage Offers",
-                                        description:
-                                            "Edit, update, or delete your bank's offers.",
-                                        icon: Icons.grid_view_rounded,
-                                        onTap: () => _openManageOffers(context),
-                                      ),
-                                    ),
-
-                                    const SizedBox(width: 20),
-
-                                    Expanded(
-                                      child: _actionCard(
-                                        context,
-                                        title: "Review Requests",
-                                        description:
-                                            "Check borrower applications.",
-                                        icon: Icons.check_circle_outline,
-                                        onTap: () =>
-                                            _openReviewRequests(context),
-                                      ),
-                                    ),
-                                  ],
                                 ),
 
-                                const SizedBox(height: 20),
+                                SizedBox(
+                                  width: isMobile ? 0 : 25,
+                                  height: isMobile ? 25 : 0,
+                                ),
 
-                                _actionCard(
-                                  context,
-                                  title: "Add New Offer",
-                                  description:
-                                      "Create a new financing offer for ${widget.bankName}.",
-                                  icon: Icons.add,
-                                  isFullWidth: true,
-                                  onTap: () => _openAddOffer(context),
+                                // =========================
+                                // RIGHT PANEL
+                                // =========================
+                                Flexible(
+                                  flex: isMobile ? 0 : 6,
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _actionCard(
+                                              context,
+                                              title: "Manage Offers",
+                                              description:
+                                                  "Edit, update, or delete your bank's offers.",
+                                              icon: Icons.grid_view_rounded,
+                                              onTap: () =>
+                                                  _openManageOffers(context),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 20),
+
+                                          Expanded(
+                                            child: _actionCard(
+                                              context,
+                                              title: "Review Requests",
+                                              description:
+                                                  "Check borrower applications.",
+                                              icon: Icons.check_circle_outline,
+                                              onTap: () =>
+                                                  _openReviewRequests(context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 20),
+
+                                      _actionCard(
+                                        context,
+                                        title: "Add New Offer",
+                                        description:
+                                            AppSettings.instance.isArabic
+                                            ? "أنشئ عرض تمويل جديدًا لـ ${AppSettings.instance.tr(widget.bankName)}."
+                                            : "Create a new financing offer for ${widget.bankName}.",
+                                        icon: Icons.add,
+                                        isFullWidth: true,
+                                        onTap: () => _openAddOffer(context),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
+                            );
+                          },
+                        ),
+                      ),
               ),
             ],
           ),

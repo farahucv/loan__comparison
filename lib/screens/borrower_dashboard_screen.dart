@@ -55,7 +55,9 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading dashboard: ${friendlyError(error)}'),
+          content: Text(
+            '${AppSettings.instance.tr('Error loading dashboard:')} ${friendlyError(error)}',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -331,7 +333,9 @@ class _BorrowerDashboardScreenState extends State<BorrowerDashboardScreen> {
             : Colors.white.withValues(alpha: .085),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: active ? kBlue.withValues(alpha: .8) : Colors.white.withValues(alpha: .06),
+          color: active
+              ? kBlue.withValues(alpha: .8)
+              : Colors.white.withValues(alpha: .06),
         ),
       ),
       child: Column(
