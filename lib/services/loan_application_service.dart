@@ -39,6 +39,67 @@ class PendingDocument {
   });
 }
 
+/// One item the lender asks for with "Request more information".
+class InfoRequestItem {
+  final String id;
+
+  /// document | field | other
+  final String type;
+
+  /// Document category, for type = document (e.g. 'Salary Certificate').
+  final String category;
+
+  /// Column name, for type = field (e.g. 'employer').
+  final String field;
+
+  final String note;
+
+  const InfoRequestItem({
+    required this.id,
+    required this.type,
+    this.category = '',
+    this.field = '',
+    this.note = '',
+  });
+
+  factory InfoRequestItem.fromMap(Map<String, dynamic> map) => InfoRequestItem(
+    id: map['id']?.toString() ?? '',
+    type: map['type']?.toString() ?? 'other',
+    category: map['category']?.toString() ?? '',
+    field: map['field']?.toString() ?? '',
+    note: map['note']?.toString() ?? '',
+  );
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'type': type,
+    if (type == 'document') 'category': category,
+    if (type == 'field') 'field': field,
+    if (note.trim().isNotEmpty) 'note': note.trim(),
+  };
+}
+
+/// Fields the lender can ask the borrower to correct: column -> label.
+const Map<String, String> infoRequestFields = {
+  'full_name': 'Full name',
+  'national_id': 'National ID',
+  'date_of_birth': 'Date of birth',
+  'address': 'Address',
+  'employer': 'Employer',
+  'job_title': 'Job title',
+  'employment_sector': 'Sector',
+  'years_at_job': 'Years at job',
+  'iban': 'IBAN',
+};
+
+/// Document categories the lender can ask for.
+const List<String> infoRequestDocuments = [
+  'National ID',
+  'Salary Certificate',
+  'Bank Statement',
+  'Other',
+];
+
 class LoanApplicationData {
   final String id;
   final String requestId;
@@ -54,6 +115,14 @@ class LoanApplicationData {
   final double? yearsAtJob;
   final String iban;
   final String notes;
+  final DateTime? dateOfBirth;
+
+  /// government | private | military | retired
+  final String employmentSector;
+
+  /// credit_bureau_check, info_accurate, simulation_ack,
+  /// identity_verified_simulated, accepted_at
+  final Map<String, dynamic> consents;
 
   final List<LoanDocument> documents;
 
@@ -61,6 +130,13 @@ class LoanApplicationData {
   final String status;
   final String lenderMessage;
   final DateTime? updatedAt;
+
+  /// What the lender asked for in the last "more information" request.
+  final List<InfoRequestItem> infoRequests;
+  final String borrowerResponse;
+
+  /// 1 for the first submission, +1 per resubmission (set by the database).
+  final int reviewRound;
 
   LoanApplicationData({
     required this.id,
@@ -76,10 +152,16 @@ class LoanApplicationData {
     required this.yearsAtJob,
     required this.iban,
     required this.notes,
+    required this.dateOfBirth,
+    required this.employmentSector,
+    required this.consents,
     required this.documents,
     required this.status,
     required this.lenderMessage,
     required this.updatedAt,
+    this.infoRequests = const [],
+    this.borrowerResponse = '',
+    this.reviewRound = 1,
   });
 
   factory LoanApplicationData.fromMap(Map<String, dynamic> row) {
@@ -111,10 +193,23 @@ class LoanApplicationData {
           : double.tryParse(row['years_at_job'].toString()),
       iban: row['iban']?.toString() ?? '',
       notes: row['notes']?.toString() ?? '',
+      dateOfBirth: DateTime.tryParse(row['date_of_birth']?.toString() ?? ''),
+      employmentSector: row['employment_sector']?.toString() ?? '',
+      consents: row['consents'] is Map
+          ? Map<String, dynamic>.from(row['consents'] as Map)
+          : <String, dynamic>{},
       documents: docs,
       status: row['status']?.toString() ?? 'submitted',
       lenderMessage: row['lender_message']?.toString() ?? '',
       updatedAt: DateTime.tryParse(row['updated_at']?.toString() ?? ''),
+      infoRequests: [
+        if (row['info_requests'] is List)
+          for (final item in row['info_requests'] as List)
+            if (item is Map)
+              InfoRequestItem.fromMap(Map<String, dynamic>.from(item)),
+      ],
+      borrowerResponse: row['borrower_response']?.toString() ?? '',
+      reviewRound: int.tryParse(row['review_round']?.toString() ?? '') ?? 1,
     );
   }
 }
@@ -162,6 +257,23 @@ class LoanApplicationService {
     return LoanApplicationData.fromMap(row);
   }
 
+  /// Borrower's monthly income from the financial profile (step 2 of the
+  /// application shows it read-only).
+  Future<double?> getMonthlyIncome() async {
+    final row = await _supabase
+        .from('borrower_profiles')
+        .select('monthly_income')
+        .eq('user_id', _uid)
+        .maybeSingle();
+
+    final value = row?['monthly_income'];
+
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+
+    return double.tryParse(value.toString());
+  }
+
   /// Borrower: request id -> application status (for the Request Status list).
   Future<Map<String, String>> getBorrowerStatuses() async {
     final rows = await _supabase
@@ -203,6 +315,7 @@ class LoanApplicationService {
     required Map<String, dynamic> fields,
     required List<PendingDocument> newDocuments,
     LoanApplicationData? existing,
+    String? borrowerResponse,
   }) async {
     final uid = _uid;
 
@@ -216,7 +329,11 @@ class LoanApplicationService {
 
       await _supabase.storage
           .from(bucket)
-          .uploadBinary(path, file.bytes);
+          .uploadBinary(
+            path,
+            file.bytes,
+            fileOptions: FileOptions(contentType: _contentType(file.name)),
+          );
 
       docs.add(
         LoanDocument(name: file.name, path: path, category: file.category),
@@ -238,9 +355,15 @@ class LoanApplicationService {
         'lender_id': lenderId,
       });
     } else {
+      // review_round is increased by the database, not here.
       await _supabase
           .from('loan_applications')
-          .update({...payload, 'lender_message': null})
+          .update({
+            ...payload,
+            'lender_message': null,
+            if (borrowerResponse != null)
+              'borrower_response': borrowerResponse.trim(),
+          })
           .eq('id', existing.id)
           .eq('borrower_id', uid);
     }
@@ -254,9 +377,14 @@ class LoanApplicationService {
     required String applicationId,
     required String status,
     String? message,
+    List<InfoRequestItem> infoRequests = const [],
   }) async {
     if (!{'more_info_required', 'approved', 'rejected'}.contains(status)) {
       throw Exception('Invalid application status.');
+    }
+
+    if (status == 'more_info_required' && infoRequests.isEmpty) {
+      throw Exception('Request at least one item from the borrower');
     }
 
     await _supabase
@@ -264,6 +392,8 @@ class LoanApplicationService {
         .update({
           'status': status,
           'lender_message': message,
+          if (status == 'more_info_required')
+            'info_requests': infoRequests.map((i) => i.toMap()).toList(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', applicationId)
@@ -273,6 +403,17 @@ class LoanApplicationService {
   // =========================
   // FILES
   // =========================
+
+  /// The picker only allows pdf, jpg, jpeg and png.
+  String _contentType(String fileName) {
+    final name = fileName.toLowerCase();
+
+    if (name.endsWith('.pdf')) return 'application/pdf';
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+
+    return 'application/octet-stream';
+  }
 
   Future<String> signedUrl(String path) {
     return _supabase.storage.from(bucket).createSignedUrl(path, 3600);

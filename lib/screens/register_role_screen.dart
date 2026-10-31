@@ -21,11 +21,7 @@ class _RegisterRoleScreenState extends State<RegisterRoleScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              AppPalette.bg1,
-              AppPalette.bg2,
-              AppPalette.bg3,
-            ],
+            colors: [AppPalette.bg1, AppPalette.bg2, AppPalette.bg3],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -58,10 +54,7 @@ class _RegisterRoleScreenState extends State<RegisterRoleScreen> {
                       const SizedBox(height: 8),
                       AppText(
                         "Choose your account type",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 15,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 15),
                       ),
 
                       // مسافة محددة وقريبة رفعنا بها الكرت لأعلى بدلاً من الـ Spacer
@@ -75,18 +68,18 @@ class _RegisterRoleScreenState extends State<RegisterRoleScreen> {
                           vertical: 36,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
+                          color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(28),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                             width: 1,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Colors.black.withValues(alpha: 0.25),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
-                            )
+                            ),
                           ],
                         ),
                         child: Column(
@@ -190,14 +183,11 @@ class _RegisterRoleScreenState extends State<RegisterRoleScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 20,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xff00A8E8).withOpacity(0.18)
-              : Colors.white.withOpacity(0.04),
+              ? const Color(0xff00A8E8).withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? const Color(0xff00A8E8) : Colors.white24,
@@ -223,9 +213,7 @@ class _RegisterRoleScreenState extends State<RegisterRoleScreen> {
               ),
             ),
             Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_off,
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: selected ? const Color(0xff00A8E8) : Colors.white38,
               size: 22,
             ),

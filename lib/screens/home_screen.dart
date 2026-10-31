@@ -9,22 +9,13 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   final List<Map<String, String>> partnerBanks = const [
-    {
-      "name": "Riyad Bank",
-      "logo": "assets/images/Riyad-Bank-Logo.png",
-    },
+    {"name": "Riyad Bank", "logo": "assets/images/Riyad-Bank-Logo.png"},
     {
       "name": "Saudi National Bank",
       "logo": "assets/images/Saudi_National_Bank_Logo.png",
     },
-    {
-      "name": "Bank Albilad",
-      "logo": "assets/images/Albilad-Bank-Logo.png",
-    },
-    {
-      "name": "Al Rajhi Bank",
-      "logo": "assets/images/Alrajhi-Bank-Logo.png",
-    },
+    {"name": "Bank Albilad", "logo": "assets/images/Albilad-Bank-Logo.png"},
+    {"name": "Al Rajhi Bank", "logo": "assets/images/Alrajhi-Bank-Logo.png"},
   ];
 
   @override
@@ -41,11 +32,7 @@ class HomeScreen extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    AppPalette.bg1,
-                    AppPalette.bg2,
-                    AppPalette.bg3,
-                  ],
+                  colors: [AppPalette.bg1, AppPalette.bg2, AppPalette.bg3],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -95,8 +82,7 @@ class HomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      const LoginScreen(),
+                                  builder: (context) => const LoginScreen(),
                                 ),
                               );
                             },
@@ -121,8 +107,7 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -130,12 +115,12 @@ class HomeScreen extends StatelessWidget {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.08),
-                                    borderRadius:
-                                        BorderRadius.circular(20),
+                                    color: Colors.blue.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: Colors.lightBlue
-                                          .withOpacity(0.4),
+                                      color: Colors.lightBlue.withValues(
+                                        alpha: 0.4,
+                                      ),
                                     ),
                                   ),
                                   child: Row(
@@ -213,10 +198,8 @@ class HomeScreen extends StatelessWidget {
                                   runSpacing: 12,
                                   children: [
                                     ElevatedButton(
-                                      style:
-                                          ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            Colors.lightBlue,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.lightBlue,
                                         foregroundColor: Colors.white,
                                       ),
                                       onPressed: () {
@@ -260,7 +243,7 @@ class HomeScreen extends StatelessWidget {
                               height: 350,
                               width: 450,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: ClipRRect(
@@ -303,8 +286,7 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 15),
 
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 250),
+                      padding: const EdgeInsets.symmetric(horizontal: 250),
                       child: AppText(
                         'A guided flow from loan type selection to lender decision, designed for a clearer borrowing experience.',
                         textAlign: TextAlign.center,
@@ -350,8 +332,7 @@ class HomeScreen extends StatelessWidget {
 
                     // ================= PARTNERS =================
                     Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 80),
+                      padding: const EdgeInsets.symmetric(horizontal: 80),
                       child: partnersSection(),
                     ),
 
@@ -372,7 +353,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _languageButton() {
     return PopupMenuButton<bool>(
-      tooltip: 'Language',
+      tooltip: AppSettings.instance.tr('Language'),
       onSelected: (isArabic) {
         AppSettings.instance.setArabic(isArabic);
       },
@@ -382,13 +363,11 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                !AppSettings.instance.isArabic
-                    ? Icons.check
-                    : Icons.language,
+                !AppSettings.instance.isArabic ? Icons.check : Icons.language,
                 size: 18,
               ),
               const SizedBox(width: 8),
-              const Text('English'),
+              AppText('English'),
             ],
           ),
         ),
@@ -397,13 +376,11 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                AppSettings.instance.isArabic
-                    ? Icons.check
-                    : Icons.language,
+                AppSettings.instance.isArabic ? Icons.check : Icons.language,
                 size: 18,
               ),
               const SizedBox(width: 8),
-              const Text('العربية'),
+              AppText('العربية'),
             ],
           ),
         ),
@@ -421,7 +398,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _modeButton() {
     return PopupMenuButton<bool>(
-      tooltip: 'Mode',
+      tooltip: AppSettings.instance.tr('Mode'),
       onSelected: (isDark) {
         AppSettings.instance.setDark(isDark);
       },
@@ -437,7 +414,7 @@ class HomeScreen extends StatelessWidget {
                 size: 18,
               ),
               const SizedBox(width: 8),
-              const Text('Light'),
+              AppText('Light'),
             ],
           ),
         ),
@@ -452,7 +429,7 @@ class HomeScreen extends StatelessWidget {
                 size: 18,
               ),
               const SizedBox(width: 8),
-              const Text('Dark'),
+              AppText('Dark'),
             ],
           ),
         ),
@@ -466,34 +443,22 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _headerSettingButton(
-    IconData icon,
-    String label,
-  ) {
+  Widget _headerSettingButton(IconData icon, String label) {
     final foreground = AppSettings.instance.isDark
         ? Colors.white
         : const Color(0xff202033);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       decoration: BoxDecoration(
         color: AppPalette.panel,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppPalette.border,
-        ),
+        border: Border.all(color: AppPalette.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 17,
-            color: foreground,
-          ),
+          Icon(icon, size: 17, color: foreground),
           const SizedBox(width: 7),
           Text(
             label,
@@ -504,11 +469,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Icon(
-            Icons.keyboard_arrow_down,
-            size: 17,
-            color: foreground,
-          ),
+          Icon(Icons.keyboard_arrow_down, size: 17, color: foreground),
         ],
       ),
     );
@@ -532,9 +493,7 @@ class HomeScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.panel,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppPalette.border,
-        ),
+        border: Border.all(color: AppPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,14 +513,10 @@ class HomeScreen extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.lightBlue.withOpacity(0.2),
+                  color: Colors.lightBlue.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.lightBlue,
-                  size: 20,
-                ),
+                child: Icon(icon, color: Colors.lightBlue, size: 20),
               ),
             ],
           ),
@@ -581,10 +536,7 @@ class HomeScreen extends StatelessWidget {
 
           AppText(
             description,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -607,9 +559,7 @@ class HomeScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppPalette.panel,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppPalette.border,
-              ),
+              border: Border.all(color: AppPalette.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,25 +607,19 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    featureCard(
-                      'AI-supported eligibility score',
-                    ),
+                    featureCard('AI-supported eligibility score'),
                     const SizedBox(width: 15),
                     featureCard(
-                      'Compare offers from partner banks',
+                      'Compare offers from banks shown (sample data)',
                     ),
                   ],
                 ),
                 const SizedBox(height: 15),
                 Row(
                   children: [
-                    featureCard(
-                      'Submit requests inside the platform',
-                    ),
+                    featureCard('Submit requests inside the platform'),
                     const SizedBox(width: 15),
-                    featureCard(
-                      'Track lender decisions clearly',
-                    ),
+                    featureCard('Track lender decisions clearly'),
                   ],
                 ),
               ],
@@ -694,9 +638,7 @@ class HomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppPalette.panel,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: AppPalette.border,
-          ),
+          border: Border.all(color: AppPalette.border),
         ),
         child: Row(
           children: [
@@ -705,15 +647,9 @@ class HomeScreen extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.lightBlue,
-                ),
+                border: Border.all(color: Colors.lightBlue),
               ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.lightBlue,
-                size: 14,
-              ),
+              child: const Icon(Icons.check, color: Colors.lightBlue, size: 14),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -743,9 +679,7 @@ class HomeScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.panel,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: AppPalette.border,
-        ),
+        border: Border.all(color: AppPalette.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,7 +692,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AppText(
-                    'PARTNER BANKS',
+                    'BANKS SHOWN (SAMPLE DATA)',
                     style: const TextStyle(
                       color: Colors.lightBlue,
                       fontSize: 11,
@@ -768,7 +702,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   AppText(
-                    'Compare offers from verified banks',
+                    'Compare offers from banks shown (sample data)',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -782,10 +716,9 @@ class HomeScreen extends StatelessWidget {
 
               Flexible(
                 child: Container(
-                  constraints:
-                      const BoxConstraints(maxWidth: 400),
+                  constraints: const BoxConstraints(maxWidth: 400),
                   child: AppText(
-                    'Rushd displays sample offers from partner banks to demonstrate the comparison and request flow.',
+                    'Rushd displays sample offers from the banks shown (sample data) to demonstrate the comparison and request flow.',
                     style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 12,
@@ -813,12 +746,10 @@ class HomeScreen extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: AppSettings.instance.isDark
-                      ? Colors.white.withOpacity(0.06)
+                      ? Colors.white.withValues(alpha: 0.06)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppPalette.border,
-                  ),
+                  border: Border.all(color: AppPalette.border),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -828,8 +759,7 @@ class HomeScreen extends StatelessWidget {
                       child: Image.asset(
                         bank['logo']!,
                         fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stackTrace) {
+                        errorBuilder: (context, error, stackTrace) {
                           return const Icon(
                             Icons.account_balance,
                             color: Colors.blueGrey,
@@ -854,6 +784,13 @@ class HomeScreen extends StatelessWidget {
                 ),
               );
             }).toList(),
+          ),
+
+          const SizedBox(height: 18),
+
+          AppText(
+            'Bank names are used for academic demonstration only; Rushd has no partnership with these banks.',
+            style: const TextStyle(color: Colors.white38, fontSize: 11),
           ),
         ],
       ),

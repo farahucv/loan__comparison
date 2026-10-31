@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
+import '../models/financing.dart';
+import '../services/financing_service.dart';
 import '../services/loan_application_service.dart';
 import '../services/loan_request_service.dart';
+import '../services/money_format.dart';
 
 import 'borrower_ui.dart';
-import 'loan_application_screen.dart';
+import 'final_offer_summary.dart';
+import 'journey_navigation.dart';
+import 'journey_ui.dart' show bankLogoFor;
 
 class RequestStatusScreen extends StatefulWidget {
   const RequestStatusScreen({super.key});
@@ -17,13 +23,14 @@ class RequestStatusScreen extends StatefulWidget {
 class _RequestStatusScreenState extends State<RequestStatusScreen> {
   final LoanRequestService _requestService = LoanRequestService();
 
-  final LoanApplicationService _applicationService =
-      LoanApplicationService();
+  final LoanApplicationService _applicationService = LoanApplicationService();
+
+  final FinancingService _financingService = FinancingService();
 
   List<BorrowerRequestData> requests = [];
 
-  // request id -> loan application status
-  Map<String, String> applicationStatuses = {};
+  // request id -> where that request is in the financing journey
+  Map<String, BorrowerJourney> journeys = {};
 
   bool isLoading = true;
   String? errorMessage;
@@ -34,28 +41,36 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     _loadRequests();
   }
 
-  String? _bankLogo(String bankName) {
-    final name = bankName.toLowerCase().trim();
+  String? _bankLogo(String bankName) => bankLogoFor(bankName);
 
-    if (name.contains('rajhi')) {
-      return 'assets/images/Alrajhi-Bank-Logo.png';
+  /// Falls back to the application status only, e.g. when the financing
+  /// tables are not reachable.
+  Future<Map<String, BorrowerJourney>> _loadJourneys(
+    List<BorrowerRequestData> data,
+  ) async {
+    final requestStatuses = {
+      for (final r in data) r.id: r.status.toLowerCase().trim(),
+    };
+
+    try {
+      return await _financingService.getBorrowerJourneys(requestStatuses);
+    } catch (_) {
+      Map<String, String> applications = {};
+
+      try {
+        applications = await _applicationService.getBorrowerStatuses();
+      } catch (_) {
+        // Keep the list working.
+      }
+
+      return {
+        for (final entry in requestStatuses.entries)
+          entry.key: BorrowerJourney(
+            requestStatus: entry.value,
+            applicationStatus: applications[entry.key],
+          ),
+      };
     }
-
-    if (name.contains('riyad')) {
-      return 'assets/images/Riyad-Bank-Logo.png';
-    }
-
-    if (name.contains('bilad')) {
-      return 'assets/images/Albilad-Bank-Logo.png';
-    }
-
-    if (name.contains('national') ||
-        name.contains('snb') ||
-        name.contains('ahli')) {
-      return 'assets/images/Saudi_National_Bank_Logo.png';
-    }
-
-    return null;
   }
 
   Future<void> _loadRequests() async {
@@ -68,20 +83,13 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
 
     try {
       final data = await _requestService.getBorrowerRequests();
-
-      Map<String, String> applications = {};
-
-      try {
-        applications = await _applicationService.getBorrowerStatuses();
-      } catch (_) {
-        // The application step is optional; keep the list working.
-      }
+      final loadedJourneys = await _loadJourneys(data);
 
       if (!mounted) return;
 
       setState(() {
         requests = data;
-        applicationStatuses = applications;
+        journeys = loadedJourneys;
         isLoading = false;
       });
     } catch (error) {
@@ -89,7 +97,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -125,7 +133,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Refresh',
+                      tooltip: AppSettings.instance.tr('Refresh'),
                       onPressed: _loadRequests,
                       icon: const Icon(Icons.refresh, color: Colors.white),
                     ),
@@ -175,7 +183,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             const SizedBox(height: 15),
             ElevatedButton(
               onPressed: _loadRequests,
-              child: const Text('Try Again'),
+              child: AppText('Try Again'),
             ),
           ],
         ),
@@ -230,6 +238,11 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
         request.dtiRatio != null &&
         request.eligibilityClassification != null;
 
+    // Once the bank has issued a final offer, its numbers replace the
+    // preliminary estimate made at request time.
+    final journeyOffer = _journeyFor(request).offer;
+    final finalOffer = isFinalOffer(journeyOffer) ? journeyOffer : null;
+
     Color statusColor;
     IconData statusIcon;
     String statusTitle;
@@ -270,7 +283,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -294,7 +307,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                     AppText(request.offerName, style: white(11, c: kCyan)),
                     const SizedBox(height: 3),
                     AppText(
-                      '${request.loanType} • SAR ${request.requestedAmount.toStringAsFixed(0)}',
+                      '${AppSettings.instance.tr(request.loanType)} • ${requestedApprovedLine(request.requestedAmount, finalOffer)}',
                       style: white(10, c: Colors.white54),
                     ),
                   ],
@@ -309,7 +322,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(.15),
+                  color: statusColor.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -331,117 +344,123 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             ],
           ),
 
-          if (hasEligibility) ...[
+          if (finalOffer != null) ...[
             const SizedBox(height: 18),
-
-            AppText(
-              'Eligibility Analysis',
-              style: white(14, w: FontWeight.bold),
+            FinalOfferSummary(
+              offer: finalOffer,
+              requestedAmount: request.requestedAmount,
             ),
+          ],
 
-            const SizedBox(height: 10),
+          if (hasEligibility) ...[
+            const SizedBox(height: 12),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.04),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(.08)),
-              ),
-              child: Column(
-                children: [
-                  LayoutBuilder(
-                    builder: (_, box) {
-                      final items = [
-                        _eligibilityMetric(
-                          'Eligibility Score',
-                          '${request.eligibilityScore!.toStringAsFixed(0)}%',
-                        ),
-                        _eligibilityMetric(
-                          'Classification',
-                          request.eligibilityClassification!,
-                        ),
-                      ];
+            InitialEstimateSection(
+              initiallyExpanded: finalOffer == null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .08),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    LayoutBuilder(
+                      builder: (_, box) {
+                        final items = [
+                          _eligibilityMetric(
+                            'Eligibility Score',
+                            '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                          ),
+                          _eligibilityMetric(
+                            'Classification',
+                            request.eligibilityClassification!,
+                          ),
+                        ];
 
-                      if (box.maxWidth < 500) {
-                        return Column(
-                          children: [
-                            for (final item in items)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: item,
+                        if (box.maxWidth < 500) {
+                          return Column(
+                            children: [
+                              for (final item in items)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: item,
+                                  ),
                                 ),
-                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: items[0]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[1]),
                           ],
                         );
-                      }
+                      },
+                    ),
 
-                      return Row(
-                        children: [
-                          Expanded(child: items[0]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[1]),
-                        ],
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 10),
 
-                  const SizedBox(height: 10),
+                    LayoutBuilder(
+                      builder: (_, box) {
+                        final items = [
+                          _eligibilityMetric(
+                            'Monthly Installment',
+                            formatSar(request.monthlyInstallment!, decimals: 2),
+                          ),
+                          _eligibilityMetric(
+                            'DTI',
+                            '${request.dtiRatio!.toStringAsFixed(2)}%',
+                          ),
+                          _eligibilityMetric(
+                            'Installment Ratio',
+                            '${request.installmentRatio!.toStringAsFixed(2)}%',
+                          ),
+                        ];
 
-                  LayoutBuilder(
-                    builder: (_, box) {
-                      final items = [
-                        _eligibilityMetric(
-                          'Monthly Installment',
-                          'SAR ${request.monthlyInstallment!.toStringAsFixed(2)}',
-                        ),
-                        _eligibilityMetric(
-                          'DTI',
-                          '${request.dtiRatio!.toStringAsFixed(2)}%',
-                        ),
-                        _eligibilityMetric(
-                          'Installment Ratio',
-                          '${request.installmentRatio!.toStringAsFixed(2)}%',
-                        ),
-                      ];
-
-                      if (box.maxWidth < 650) {
-                        return Column(
-                          children: [
-                            for (final item in items)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: item,
+                        if (box.maxWidth < 650) {
+                          return Column(
+                            children: [
+                              for (final item in items)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: item,
+                                  ),
                                 ),
-                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: items[0]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[1]),
+                            const SizedBox(width: 10),
+                            Expanded(child: items[2]),
                           ],
                         );
-                      }
+                      },
+                    ),
 
-                      return Row(
-                        children: [
-                          Expanded(child: items[0]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[1]),
-                          const SizedBox(width: 10),
-                          Expanded(child: items[2]),
-                        ],
-                      );
-                    },
-                  ),
+                    const SizedBox(height: 10),
 
-                  const SizedBox(height: 10),
-
-                  AppText(
-                    'This result is a preliminary suitability indicator and does not represent final loan approval.',
-                    style: white(9, c: Colors.white54),
-                  ),
-                ],
+                    AppText(
+                      'This result is a preliminary suitability indicator and does not represent final loan approval.',
+                      style: white(9, c: Colors.white54),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -452,9 +471,9 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(.07),
+              color: statusColor.withValues(alpha: .07),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withOpacity(.25)),
+              border: Border.all(color: statusColor.withValues(alpha: .25)),
             ),
             child: AppText(
               _statusMessage(request),
@@ -462,135 +481,90 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
             ),
           ),
 
-          if (status == 'approved') ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.greenAccent,
-                  side: BorderSide(color: Colors.greenAccent.withOpacity(.5)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () => _showNextStep(request),
-                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                label: AppText(
-                  "What's the next step?",
-                  style: white(12, w: FontWeight.bold, c: Colors.greenAccent),
-                ),
-              ),
-            ),
+          const SizedBox(height: 14),
 
-            const SizedBox(height: 10),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () => _openApplication(request),
-                icon: const Icon(Icons.rocket_launch_outlined, size: 18),
-                label: AppText(
-                  applicationStatuses.containsKey(request.id)
-                      ? 'Continue Your Journey'
-                      : 'Proceed to Get Your Loan',
-                  style: white(12, w: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            if (applicationStatuses.containsKey(request.id)) ...[
-              const SizedBox(height: 8),
-              AppText(
-                _applicationLabel(applicationStatuses[request.id]!),
-                style: white(10, c: Colors.white54),
-              ),
-            ],
-          ],
+          _journeySection(request),
         ],
       ),
     );
   }
 
-  Future<void> _openApplication(BorrowerRequestData request) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => LoanApplicationScreen(request: request)),
+  BorrowerJourney _journeyFor(BorrowerRequestData request) =>
+      journeys[request.id] ??
+      BorrowerJourney(requestStatus: request.status.toLowerCase().trim());
+
+  /// Current stage, a 6-step progress strip and one Continue button.
+  Widget _journeySection(BorrowerRequestData request) {
+    final journey = _journeyFor(request);
+    final info = stageInfo(journey.stage);
+    final canContinue = journeyScreen(request, journey) != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(info.icon, color: info.color, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AppText(info.label, style: white(12, w: FontWeight.bold)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (var i = 1; i <= journeySteps.length; i++)
+              Expanded(
+                child: Container(
+                  height: 5,
+                  margin: const EdgeInsetsDirectional.only(end: 4),
+                  decoration: BoxDecoration(
+                    color: i <= info.step
+                        ? info.color
+                        : Colors.white.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${AppSettings.instance.tr('Step')} ${info.step} ${AppSettings.instance.tr('of')} ${journeySteps.length} — ${AppSettings.instance.tr(journeySteps[info.step - 1])}',
+          style: white(10, c: Colors.white54),
+        ),
+        if (canContinue) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () => _continue(request, journey),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: AppText('Continue', style: white(13, w: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ],
     );
+  }
+
+  Future<void> _continue(
+    BorrowerRequestData request,
+    BorrowerJourney journey,
+  ) async {
+    await openJourney(context, request, journey);
 
     if (!mounted) return;
 
     await _loadRequests();
-  }
-
-  String _applicationLabel(String status) {
-    switch (status) {
-      case 'approved':
-        return 'Application status: Approved by the bank';
-      case 'rejected':
-        return 'Application status: Not approved';
-      case 'more_info_required':
-        return 'Application status: The bank needs more information';
-      default:
-        return 'Application status: Under review by the bank';
-    }
-  }
-
-  void _showNextStep(BorrowerRequestData request) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Directionality(
-          textDirection: AppSettings.instance.isArabic
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-          child: AlertDialog(
-            backgroundColor: const Color(0xff1E0B36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                const Icon(Icons.account_balance, color: kCyan),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    AppSettings.instance.tr('Next Step'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              AppSettings.instance.tr(
-                'Congratulations, your loan request has been approved by the lender. '
-                'To continue with the procedures and receive your loan, please visit '
-                'the bank in person and complete the remaining requirements.',
-              ),
-              style: const TextStyle(color: Colors.white70, height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(AppSettings.instance.tr('Got it')),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Widget _eligibilityMetric(String label, String value) {
@@ -619,7 +593,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
       final reason = request.rejectionReason?.trim() ?? '';
 
       if (reason.isNotEmpty) {
-        return 'Your loan request was not approved by the lender.\nReason: $reason';
+        return '${AppSettings.instance.tr('Your loan request was not approved by the lender.')}\n${AppSettings.instance.tr('Reason:')} $reason';
       }
 
       return 'Your loan request was not approved by the lender.';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import '../models/loan_offer.dart';
@@ -41,7 +42,6 @@ class _AddOfferScreenState extends State<AddOfferScreen> {
     if (widget.existingOffer != null) {
       final offer = widget.existingOffer!;
 
-      
       offerNameController.text = offer.offerName;
       rateController.text = offer.interestRate;
       termController.text = offer.term;
@@ -56,7 +56,6 @@ class _AddOfferScreenState extends State<AddOfferScreen> {
 
   @override
   void dispose() {
-    
     offerNameController.dispose();
     rateController.dispose();
     termController.dispose();
@@ -117,7 +116,8 @@ class _AddOfferScreenState extends State<AddOfferScreen> {
       } else {
         savedOffer = await _offerService.updateOffer(
           id: widget.existingOffer!.id,
-bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameController.text.trim(),
+          bankName: widget.existingOffer?.bankName ?? "",
+          offerName: offerNameController.text.trim(),
           loanType: selectedLoanType!,
           interestRate: rate,
           term: term,
@@ -142,7 +142,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
     } catch (error) {
       if (!mounted) return;
 
-      _showError('Error: $error');
+      _showError(friendlyError(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -154,7 +154,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+      SnackBar(content: AppText(message), backgroundColor: Colors.redAccent),
     );
   }
 
@@ -177,7 +177,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
               width: 500,
               padding: const EdgeInsets.all(30),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: Form(
@@ -198,10 +198,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
 
                     const SizedBox(height: 25),
 
-                    inputField(
-  "Offer Name",
-  offerNameController,
-),
+                    inputField("Offer Name", offerNameController),
 
                     AppText(
                       "Loan Type",
@@ -211,7 +208,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
                     const SizedBox(height: 8),
 
                     DropdownButtonFormField<String>(
-                      value: selectedLoanType,
+                      initialValue: selectedLoanType,
                       dropdownColor: AppPalette.bg2,
                       decoration: inputDecoration(),
                       items: loanTypes.map((type) {
@@ -230,7 +227,9 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
                       },
                       validator: (value) {
                         if (value == null) {
-                          return "Please select loan type";
+                          return AppSettings.instance.tr(
+                            "Please select loan type",
+                          );
                         }
 
                         return null;
@@ -303,7 +302,9 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
                             height: 50,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.12),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.12,
+                                ),
                               ),
                               onPressed: isSaving
                                   ? null
@@ -347,11 +348,11 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
         style: const TextStyle(color: Colors.white),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return "This field is required";
+            return AppSettings.instance.tr("This field is required");
           }
 
           if (email && !value.contains('@')) {
-            return "Enter a valid email";
+            return AppSettings.instance.tr("Enter a valid email");
           }
 
           return null;
@@ -364,7 +365,7 @@ bankName: widget.existingOffer?.bankName ?? "",          offerName: offerNameCon
   InputDecoration inputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.08),
+      fillColor: Colors.white.withValues(alpha: 0.08),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: BorderSide.none,

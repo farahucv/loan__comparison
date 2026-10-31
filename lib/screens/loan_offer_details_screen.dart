@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -8,6 +10,7 @@ import '../services/eligibility_service.dart';
 import '../services/loan_request_service.dart';
 
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 
 class LoanOfferDetailsScreen extends StatefulWidget {
   const LoanOfferDetailsScreen({super.key});
@@ -21,6 +24,18 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
   final EligibilityService _eligibilityService = EligibilityService();
 
   bool isSubmitting = false;
+
+  /// Declared debts + active Rushd installments, same as the database.
+  double? totalObligations;
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadObligations(BorrowerAppState.instance.debts).then((o) {
+      if (mounted) setState(() => totalObligations = o.totalObligations);
+    });
+  }
 
   String? _bankLogo(String bankName) {
     final name = bankName.toLowerCase().trim();
@@ -67,7 +82,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
     try {
       return _eligibilityService.calculate(
         monthlyIncome: state.income,
-        currentMonthlyObligations: state.debts,
+        currentMonthlyObligations: totalObligations ?? state.debts,
         loanAmount: state.amount,
         annualInterestRate: interestRate,
         termMonths: termMonths,
@@ -106,7 +121,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
     } catch (error) {
       if (!mounted) return;
 
-      _showMessage('Error submitting request: $error', error: true);
+      _showMessage(friendlyError(error), error: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -119,7 +134,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
   void _showMessage(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: AppText(message),
         backgroundColor: error ? Colors.redAccent : null,
       ),
     );
@@ -231,7 +246,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -250,7 +265,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(.15),
+                  color: Colors.green.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: AppText(
@@ -282,8 +297,14 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
             builder: (_, box) {
               final metrics = [
                 metric('Interest Rate', '${offer.interestRate}%'),
-                metric('Maximum Term', '${offer.term} months'),
-                metric('Maximum Amount', 'SAR ${offer.amount}'),
+                metric(
+                  'Maximum Term',
+                  '${offer.term} ${AppSettings.instance.tr('months')}',
+                ),
+                metric(
+                  'Maximum Amount',
+                  formatSar(double.tryParse(offer.amount), decimals: 0),
+                ),
               ];
 
               if (box.maxWidth < 600) {
@@ -317,12 +338,9 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
               final items = [
                 metric(
                   'Requested Amount',
-                  'SAR ${state.amount.toStringAsFixed(0)}',
+                  formatSar(state.amount, decimals: 0),
                 ),
-                metric(
-                  'Monthly Income',
-                  'SAR ${state.income.toStringAsFixed(0)}',
-                ),
+                metric('Monthly Income', formatSar(state.income, decimals: 0)),
                 metric('Loan Type', state.loanType),
               ];
 
@@ -406,7 +424,10 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
                       final items = [
                         metric(
                           'Monthly Installment',
-                          'SAR ${eligibility.monthlyInstallment.toStringAsFixed(2)}',
+                          formatSar(
+                            eligibility.monthlyInstallment,
+                            decimals: 2,
+                          ),
                         ),
                         metric(
                           'DTI',
@@ -476,8 +497,12 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
             runSpacing: 8,
             children: [
               _feature('Financing offer from ${offer.bankName}'),
-              _feature('Maximum term ${offer.term} months'),
-              _feature('Maximum financing SAR ${offer.amount}'),
+              _feature(
+                '${AppSettings.instance.tr('Maximum term')} ${offer.term} ${AppSettings.instance.tr('months')}',
+              ),
+              _feature(
+                'Maximum financing ${formatSar(double.tryParse(offer.amount), decimals: 0)}',
+              ),
             ],
           ),
 
@@ -525,7 +550,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
           offer.offerName,
           offer.loanType,
           'Interest Rate: ${offer.interestRate}%',
-          'Maximum Term: ${offer.term} months',
+          '${AppSettings.instance.tr('Maximum Term:')} ${offer.term} ${AppSettings.instance.tr('months')}',
         ]),
 
         if (eligibility != null) ...[
@@ -534,7 +559,7 @@ class _LoanOfferDetailsScreenState extends State<LoanOfferDetailsScreen> {
           _side('Eligibility', [
             'Score: ${eligibility.finalScore.toStringAsFixed(0)}%',
             'Classification: ${eligibility.classification}',
-            'Monthly Installment: SAR ${eligibility.monthlyInstallment.toStringAsFixed(2)}',
+            'Monthly Installment: ${formatSar(eligibility.monthlyInstallment, decimals: 2)}',
             'DTI: ${eligibility.dtiRatio.toStringAsFixed(1)}%',
             'Installment Ratio: ${eligibility.installmentRatio.toStringAsFixed(1)}%',
           ]),

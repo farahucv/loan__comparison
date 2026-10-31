@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'lender_dashboard_screen.dart';
@@ -115,7 +116,7 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $error'),
+          content: Text(friendlyError(error)),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -183,10 +184,10 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                         vertical: 36,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Column(
@@ -196,13 +197,17 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                             controller: nameController,
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return "Please enter your name";
+                                return AppSettings.instance.tr(
+                                  "Please enter your name",
+                                );
                               }
 
                               if (!RegExp(
                                 r'^[a-zA-Z\u0600-\u06FF ]+$',
                               ).hasMatch(value.trim())) {
-                                return "Name must contain letters only";
+                                return AppSettings.instance.tr(
+                                  "Name must contain letters only",
+                                );
                               }
 
                               return null;
@@ -219,11 +224,15 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return "Please enter mobile number";
+                                return AppSettings.instance.tr(
+                                  "Please enter mobile number",
+                                );
                               }
 
                               if (value.length != 10) {
-                                return "Mobile number must be 10 digits";
+                                return AppSettings.instance.tr(
+                                  "Mobile number must be 10 digits",
+                                );
                               }
 
                               return null;
@@ -236,13 +245,17 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                             keyboardType: TextInputType.emailAddress,
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return "Please enter email";
+                                return AppSettings.instance.tr(
+                                  "Please enter email",
+                                );
                               }
 
                               if (!RegExp(
                                 r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,}$',
                               ).hasMatch(value.trim())) {
-                                return "Enter a valid email";
+                                return AppSettings.instance.tr(
+                                  "Enter a valid email",
+                                );
                               }
 
                               return null;
@@ -268,11 +281,15 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return "Please enter password";
+                                return AppSettings.instance.tr(
+                                  "Please enter password",
+                                );
                               }
 
                               if (value.length < 6) {
-                                return "Password must be at least 6 characters";
+                                return AppSettings.instance.tr(
+                                  "Password must be at least 6 characters",
+                                );
                               }
 
                               return null;
@@ -282,13 +299,15 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                           const SizedBox(height: 10),
 
                           DropdownButtonFormField<String>(
-                            value: selectedBank,
+                            initialValue: selectedBank,
                             dropdownColor: AppPalette.bg2,
                             decoration: InputDecoration(
-                              hintText: "Represented Bank",
+                              hintText: AppSettings.instance.tr(
+                                "Represented Bank",
+                              ),
                               hintStyle: const TextStyle(color: Colors.white60),
                               filled: true,
-                              fillColor: Colors.white.withOpacity(0.08),
+                              fillColor: Colors.white.withValues(alpha: 0.08),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 18,
                                 vertical: 15,
@@ -319,7 +338,9 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
                             },
                             validator: (value) {
                               if (value == null) {
-                                return "Please select represented bank";
+                                return AppSettings.instance.tr(
+                                  "Please select represented bank",
+                                );
                               }
 
                               return null;
@@ -390,11 +411,11 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
         style: const TextStyle(color: Colors.white),
         validator: validator,
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: AppSettings.instance.tr(hint),
           hintStyle: const TextStyle(color: Colors.white60),
           suffixIcon: suffixIcon,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: Colors.white.withValues(alpha: 0.08),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 15,

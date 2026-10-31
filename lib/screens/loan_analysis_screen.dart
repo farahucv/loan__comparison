@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
@@ -8,6 +10,7 @@ import '../services/loan_offer_service.dart';
 import '../services/eligibility_service.dart';
 
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 
 class LoanAnalysisScreen extends StatefulWidget {
   const LoanAnalysisScreen({super.key});
@@ -21,6 +24,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
   final EligibilityService _eligibilityService = EligibilityService();
 
   List<LoanOffer> offers = [];
+
+  /// Declared debts + active Rushd installments, same as the database.
+  double? totalObligations;
 
   bool isLoading = true;
 
@@ -78,10 +84,13 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
         return sameLoanType && enoughAmount;
       }).toList();
 
+      final obligations = await loadObligations(state.debts);
+
       if (!mounted) return;
 
       setState(() {
         offers = filteredOffers;
+        totalObligations = obligations.totalObligations;
         isLoading = false;
       });
     } catch (error) {
@@ -89,7 +98,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -121,7 +130,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                         const SizedBox(height: 6),
 
                         AppText(
-                          'Showing available ${state.loanType.toLowerCase()} offers for your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
+                          AppSettings.instance.isArabic
+                              ? 'عرض العروض المتاحة لـ${AppSettings.instance.tr(state.loanType)} لمبلغك المطلوب ${formatSar(state.amount, decimals: 0)}.'
+                              : 'Showing available ${state.loanType.toLowerCase()} offers for your requested amount of ${formatSar(state.amount, decimals: 0)}.',
                           style: white(12, c: Colors.white54),
                         ),
                       ],
@@ -155,15 +166,15 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     final items = [
                       metric(
                         'Monthly Income',
-                        'SAR ${state.income.toStringAsFixed(0)}',
+                        formatSar(state.income, decimals: 0),
                       ),
                       metric(
                         'Monthly Expenses',
-                        'SAR ${state.expenses.toStringAsFixed(0)}',
+                        formatSar(state.expenses, decimals: 0),
                       ),
                       metric(
                         'Requested Amount',
-                        'SAR ${state.amount.toStringAsFixed(0)}',
+                        formatSar(state.amount, decimals: 0),
                       ),
                     ];
 
@@ -219,7 +230,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                             const SizedBox(height: 4),
 
                             AppText(
-                              'Offers are retrieved from Rushd partner lenders and filtered according to your selected loan type and requested amount.',
+                              'Offers are retrieved from the banks shown (sample data) and filtered according to your selected loan type and requested amount.',
                               style: white(11, c: Colors.white60),
                             ),
                           ],
@@ -311,7 +322,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
       try {
         eligibility = _eligibilityService.calculate(
           monthlyIncome: state.income,
-          currentMonthlyObligations: state.debts,
+          currentMonthlyObligations: totalObligations ?? state.debts,
           loanAmount: state.amount,
           annualInterestRate: interestRate,
           termMonths: termMonths,
@@ -343,7 +354,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     ? Image.asset(
                         logo,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) {
+                        errorBuilder: (_, _, _) {
                           return const Icon(
                             Icons.account_balance,
                             color: kBlue,
@@ -358,7 +369,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: kBlue.withOpacity(.18),
+                  color: kBlue.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: AppText('Available', style: white(10, c: kCyan)),
@@ -385,8 +396,14 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
             runSpacing: 10,
             children: [
               _mini('Rate', '${offer.interestRate}%'),
-              _mini('Term', '${offer.term} months'),
-              _mini('Max Amount', 'SAR ${offer.amount}'),
+              _mini(
+                'Term',
+                '${offer.term} ${AppSettings.instance.tr('months')}',
+              ),
+              _mini(
+                'Max Amount',
+                formatSar(double.tryParse(offer.amount), decimals: 0),
+              ),
             ],
           ),
 
@@ -397,7 +414,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.05),
+                color: Colors.white.withValues(alpha: .05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -430,7 +447,7 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
                     children: [
                       _mini(
                         'Monthly Installment',
-                        'SAR ${eligibility.monthlyInstallment.toStringAsFixed(2)}',
+                        formatSar(eligibility.monthlyInstallment, decimals: 2),
                       ),
                       _mini(
                         'DTI',
@@ -504,7 +521,9 @@ class _LoanAnalysisScreenState extends State<LoanAnalysisScreen> {
           const SizedBox(height: 7),
 
           AppText(
-            'There are currently no active ${state.loanType.toLowerCase()} offers that support your requested amount of SAR ${state.amount.toStringAsFixed(0)}.',
+            AppSettings.instance.isArabic
+                ? 'لا توجد حاليًا عروض ${AppSettings.instance.tr(state.loanType)} نشطة تدعم مبلغك المطلوب ${formatSar(state.amount, decimals: 0)}.'
+                : 'There are currently no active ${state.loanType.toLowerCase()} offers that support your requested amount of ${formatSar(state.amount, decimals: 0)}.',
             textAlign: TextAlign.center,
             style: white(11, c: Colors.white54),
           ),

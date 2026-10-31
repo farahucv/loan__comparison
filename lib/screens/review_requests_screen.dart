@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import '../services/error_messages.dart';
+import '../services/money_format.dart';
 
 import '../models/app_settings.dart';
+import '../models/financing.dart';
+import '../services/financing_service.dart';
 import '../services/loan_request_service.dart';
+
+import 'final_offer_summary.dart';
+import 'obligations_ui.dart';
 
 import 'lender_application_panel.dart';
 import 'manage_offers_screen.dart';
@@ -16,7 +23,12 @@ class ReviewRequestsScreen extends StatefulWidget {
 class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
   final LoanRequestService _requestService = LoanRequestService();
 
+  final FinancingService _financingService = FinancingService();
+
   List<LenderRequestData> requests = [];
+
+  /// request id -> latest financing offer (approved applications only)
+  Map<String, FinancingOffer?> offers = {};
 
   bool isLoading = true;
 
@@ -33,10 +45,20 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
     try {
       final data = await _requestService.getLenderRequests();
 
+      Map<String, FinancingOffer?> loadedOffers = {};
+
+      try {
+        final pipeline = await _financingService.getLenderPipeline();
+        loadedOffers = {for (final e in pipeline.entries) e.key: e.value.offer};
+      } catch (_) {
+        // The request list still works without the financing data.
+      }
+
       if (!mounted) return;
 
       setState(() {
         requests = data;
+        offers = loadedOffers;
         isLoading = false;
         errorMessage = null;
       });
@@ -45,7 +67,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = error.toString();
+        errorMessage = friendlyError(error);
       });
     }
   }
@@ -66,7 +88,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: AppText(
             newStatus == 'approved'
                 ? 'Request approved successfully.'
                 : 'Request rejected.',
@@ -81,7 +103,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.redAccent,
-          content: Text('Error updating request: $error'),
+          content: Text(friendlyError(error)),
         ),
       );
     }
@@ -161,7 +183,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.lightBlue.withOpacity(.2),
+                        color: Colors.lightBlue.withValues(alpha: .2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: AppText(
@@ -206,7 +228,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                           const Spacer(),
 
                           IconButton(
-                            tooltip: 'Refresh',
+                            tooltip: AppSettings.instance.tr('Refresh'),
                             onPressed: _loadRequests,
                             icon: const Icon(
                               Icons.refresh,
@@ -265,7 +287,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
 
             ElevatedButton(
               onPressed: _loadRequests,
-              child: const Text('Try Again'),
+              child: AppText('Try Again'),
             ),
           ],
         ),
@@ -298,11 +320,15 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
         request.dtiRatio != null &&
         request.eligibilityClassification != null;
 
+    // Once a final offer exists, its numbers replace the request-time estimate.
+    final latestOffer = offers[request.id];
+    final finalOffer = isFinalOffer(latestOffer) ? latestOffer : null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.08),
+        color: Colors.white.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -334,7 +360,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                     const SizedBox(height: 5),
 
                     AppText(
-                      '${request.loanType} • SAR ${request.requestedAmount.toStringAsFixed(0)}',
+                      '${AppSettings.instance.tr(request.loanType)} • ${requestedApprovedLine(request.requestedAmount, finalOffer)}',
                       style: const TextStyle(color: Colors.white70),
                     ),
 
@@ -359,7 +385,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(.15),
+                  color: statusColor.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: AppText(
@@ -392,82 +418,96 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
             children: [
               _infoBox(
                 'Monthly Income',
-                'SAR ${request.monthlyIncome.toStringAsFixed(0)}',
+                formatSar(request.monthlyIncome, decimals: 0),
               ),
               _infoBox(
                 'Current Monthly Obligations',
-                'SAR ${request.existingDebts.toStringAsFixed(0)}',
+                formatSar(request.existingDebts, decimals: 0),
               ),
               _infoBox(
                 'Monthly Expenses',
-                'SAR ${request.monthlyExpenses.toStringAsFixed(0)}',
+                formatSar(request.monthlyExpenses, decimals: 0),
               ),
               _infoBox(
                 'Requested Amount',
-                'SAR ${request.requestedAmount.toStringAsFixed(0)}',
+                formatSar(request.requestedAmount, decimals: 0),
               ),
             ],
           ),
 
-          if (hasEligibility) ...[
+          const SizedBox(height: 12),
+
+          // Simulated credit bureau: includes the borrower's other Rushd
+          // financings, which every debt-burden check counts.
+          CreditBureauSummaryLoader(
+            key: ValueKey('bureau_${request.borrowerId}_${request.id}'),
+            borrowerId: request.borrowerId,
+          ),
+
+          if (finalOffer != null) ...[
             const SizedBox(height: 22),
-
-            AppText(
-              'Eligibility Analysis',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            FinalOfferSummary(
+              offer: finalOffer,
+              requestedAmount: request.requestedAmount,
             ),
+          ],
 
-            const SizedBox(height: 10),
+          if (hasEligibility) ...[
+            const SizedBox(height: 16),
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(.08)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _infoBox(
-                        'Eligibility Score',
-                        '${request.eligibilityScore!.toStringAsFixed(0)}%',
-                      ),
-                      _infoBox(
-                        'Classification',
-                        request.eligibilityClassification!,
-                      ),
-                      _infoBox(
-                        'Monthly Installment',
-                        'SAR ${request.monthlyInstallment!.toStringAsFixed(2)}',
-                      ),
-                      _infoBox(
-                        'DTI',
-                        '${request.dtiRatio!.toStringAsFixed(2)}%',
-                      ),
-                      _infoBox(
-                        'Installment Ratio',
-                        '${request.installmentRatio!.toStringAsFixed(2)}%',
-                      ),
-                    ],
+            InitialEstimateSection(
+              initiallyExpanded: finalOffer == null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .08),
                   ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _infoBox(
+                          'Eligibility Score',
+                          '${request.eligibilityScore!.toStringAsFixed(0)}%',
+                        ),
+                        _infoBox(
+                          'Classification',
+                          request.eligibilityClassification!,
+                        ),
+                        _infoBox(
+                          'Monthly Installment',
+                          formatSar(request.monthlyInstallment!, decimals: 2),
+                        ),
+                        _infoBox(
+                          'DTI',
+                          '${request.dtiRatio!.toStringAsFixed(2)}%',
+                        ),
+                        _infoBox(
+                          'Installment Ratio',
+                          '${request.installmentRatio!.toStringAsFixed(2)}%',
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  AppText(
-                    'The eligibility result is a preliminary decision-support indicator and does not represent final loan approval.',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                ],
+                    AppText(
+                      'The eligibility result is a preliminary decision-support indicator and does not represent final loan approval.',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -489,7 +529,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   ),
                   onPressed: () => _showApproveDialog(request),
                   icon: const Icon(Icons.check, color: Colors.white),
-                  label: const Text(
+                  label: AppText(
                     'Approve',
                     style: TextStyle(color: Colors.white),
                   ),
@@ -503,7 +543,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
                   ),
                   onPressed: () => _showRejectDialog(request),
                   icon: const Icon(Icons.close, color: Colors.white),
-                  label: const Text(
+                  label: AppText(
                     'Reject',
                     style: TextStyle(color: Colors.white),
                   ),
@@ -521,20 +561,20 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Approve Request'),
-          content: const Text('Are you sure you want to approve this request?'),
+          title: AppText('Approve Request'),
+          content: AppText('Are you sure you want to approve this request?'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text('Cancel'),
+              child: AppText('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('Yes, Approve'),
+              child: AppText('Yes, Approve'),
             ),
           ],
         );
@@ -553,14 +593,16 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Reject Request'),
+          title: AppText('Reject Request'),
           content: TextField(
             controller: reasonController,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Rejection Reason',
-              hintText: 'Enter the reason for rejection',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppSettings.instance.tr('Rejection Reason'),
+              hintText: AppSettings.instance.tr(
+                'Enter the reason for rejection',
+              ),
+              border: const OutlineInputBorder(),
             ),
           ),
           actions: [
@@ -568,13 +610,13 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text('Cancel'),
+              child: AppText('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('Yes, Reject'),
+              child: AppText('Yes, Reject'),
             ),
           ],
         );
@@ -588,7 +630,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a rejection reason.')),
+          SnackBar(content: AppText('Please enter a rejection reason.')),
         );
 
         reasonController.dispose();
@@ -606,7 +648,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       width: 190,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.05),
+        color: Colors.white.withValues(alpha: .05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -636,7 +678,7 @@ class _ReviewRequestsScreenState extends State<ReviewRequestsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.08),
+        color: Colors.white.withValues(alpha: .08),
         borderRadius: BorderRadius.circular(25),
       ),
       child: Column(

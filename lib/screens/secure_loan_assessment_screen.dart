@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'borrower_ui.dart';
+import 'obligations_ui.dart';
 import '../models/borrower_app_state.dart';
+import '../models/financing.dart';
 
 class SecureLoanAssessmentScreen extends StatefulWidget {
   const SecureLoanAssessmentScreen({super.key});
@@ -22,11 +25,18 @@ class _SecureLoanAssessmentScreenState
 
   bool isSaving = false;
 
+  /// Active Rushd financings, shown under the existing-debts field.
+  BorrowerObligations? obligations;
+
   @override
   void initState() {
     super.initState();
 
     final state = BorrowerAppState.instance;
+
+    loadObligations(state.debts).then((o) {
+      if (mounted) setState(() => obligations = o);
+    });
 
     incomeController = TextEditingController(
       text: state.income == 0 ? '' : state.income.toStringAsFixed(0),
@@ -131,7 +141,7 @@ class _SecureLoanAssessmentScreenState
     } catch (error) {
       if (!mounted) return;
 
-      _showError('Error: $error');
+      _showError(friendlyError(error));
     } finally {
       if (mounted) {
         setState(() {
@@ -143,7 +153,7 @@ class _SecureLoanAssessmentScreenState
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+      SnackBar(content: AppText(message), backgroundColor: Colors.redAccent),
     );
   }
 
@@ -209,9 +219,24 @@ class _SecureLoanAssessmentScreenState
 
                   LayoutBuilder(
                     builder: (_, box) {
-                      final a = _field(
-                        'Existing Loans / Debts (SAR)',
-                        debtController,
+                      final a = Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _field(
+                            'Existing Loans / Debts (SAR)',
+                            debtController,
+                          ),
+                          const SizedBox(height: 6),
+                          AppText(
+                            'Do not include Rushd financing — it is added automatically.',
+                            style: white(10, c: Colors.white54),
+                          ),
+                          if (obligations != null &&
+                              obligations!.rushdCount > 0) ...[
+                            const SizedBox(height: 4),
+                            RushdObligationsNote(obligations!),
+                          ],
+                        ],
                       );
 
                       final b = _field(
@@ -246,10 +271,10 @@ class _SecureLoanAssessmentScreenState
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.amberAccent.withOpacity(.10),
+                      color: Colors.amberAccent.withValues(alpha: .10),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Colors.amberAccent.withOpacity(.35),
+                        color: Colors.amberAccent.withValues(alpha: .35),
                       ),
                     ),
                     child: Row(
@@ -357,7 +382,7 @@ class _SecureLoanAssessmentScreenState
           style: white(13),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white.withOpacity(.10),
+            fillColor: Colors.white.withValues(alpha: .10),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 14,
