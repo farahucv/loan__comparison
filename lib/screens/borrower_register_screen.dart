@@ -6,7 +6,7 @@ import '../services/error_messages.dart';
 import '../models/app_settings.dart';
 import '../models/borrower_app_state.dart';
 import 'borrower_dashboard_screen.dart';
-import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class BorrowerRegisterScreen extends StatefulWidget {
   const BorrowerRegisterScreen({super.key});
@@ -68,21 +68,15 @@ class _BorrowerRegisterScreenState extends State<BorrowerRegisterScreen> {
 
       if (!mounted) return;
 
-      // If email confirmation is enabled in Supabase,
-      // the account exists but there is no active session yet.
+      // Email confirmation is on: the account exists but there is no
+      // session until the 6-digit code from the email is entered.
       if (response.session == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Account created successfully. Please confirm your email, then sign in.',
-            ),
-          ),
-        );
-
-        Navigator.pushAndRemoveUntil(
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
+          MaterialPageRoute(
+            builder: (_) =>
+                VerifyEmailScreen(email: _emailController.text.trim()),
+          ),
         );
 
         return;

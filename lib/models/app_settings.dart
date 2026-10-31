@@ -1116,6 +1116,27 @@ class AppSettings extends ChangeNotifier {
           'ألغى المقترض القبول قبل التوقيع.',
       'Only an acceptance that is not signed yet can be cancelled.':
           'يمكن إلغاء القبول غير الموقّع فقط.',
+
+      // ===== Email verification =====
+      'Verify your email': 'تأكيد البريد الإلكتروني',
+      'We sent a 6-digit code to': 'أرسلنا رمزًا من 6 أرقام إلى',
+      'Verify': 'تحقق',
+      'Resend code': 'إعادة إرسال الرمز',
+      "Can't find it? Check your spam folder.":
+          'لم تجده؟ تحقق من مجلد الرسائل غير المرغوب فيها.',
+      'Wrong email? Go back': 'بريد إلكتروني خاطئ؟ ارجع',
+      'We sent you a new code.': 'أرسلنا لك رمزًا جديدًا.',
+      'Please enter the 6-digit code.': 'يرجى إدخال الرمز المكوّن من 6 أرقام.',
+      'The code is incorrect. Check the email and try again.':
+          'الرمز غير صحيح. تحقق من البريد وحاول مرة أخرى.',
+      'This code has expired. Tap "Resend code" to get a new one.':
+          'انتهت صلاحية هذا الرمز. اضغط "إعادة إرسال الرمز" للحصول على رمز جديد.',
+      'Too many requests. Please wait a minute and try again.':
+          'طلبات كثيرة جدًا. يرجى الانتظار دقيقة ثم المحاولة مرة أخرى.',
+      'Your email is not verified yet — we sent you a new code.':
+          'لم يتم تأكيد بريدك الإلكتروني بعد — أرسلنا لك رمزًا جديدًا.',
+      'Your email is not verified yet. Enter the code from your email, or request a new one.':
+          'لم يتم تأكيد بريدك الإلكتروني بعد. أدخل الرمز الموجود في بريدك، أو اطلب رمزًا جديدًا.',
     };
 
     if (m.containsKey(value)) {

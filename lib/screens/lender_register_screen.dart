@@ -5,7 +5,7 @@ import '../services/error_messages.dart';
 
 import '../models/app_settings.dart';
 import 'lender_dashboard_screen.dart';
-import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class LenderRegisterScreen extends StatefulWidget {
   const LenderRegisterScreen({super.key});
@@ -70,21 +70,15 @@ class _LenderRegisterScreenState extends State<LenderRegisterScreen> {
 
       if (!mounted) return;
 
-      // If email confirmation is enabled later,
-      // the account will exist but without a session.
+      // Email confirmation is on: the account exists but there is no
+      // session until the 6-digit code from the email is entered.
       if (response.session == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Account created. Please confirm your email, then sign in.',
-            ),
-          ),
-        );
-
-        Navigator.pushAndRemoveUntil(
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
+          MaterialPageRoute(
+            builder: (_) =>
+                VerifyEmailScreen(email: emailController.text.trim()),
+          ),
         );
 
         return;
