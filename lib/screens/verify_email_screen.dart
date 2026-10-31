@@ -40,8 +40,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   static const int _codeLength = 6;
   static const int _resendSeconds = 60;
 
-  // Supabase's default lifetime of an email code (Auth -> Email OTP expiry).
-  static const Duration _codeLifetime = Duration(hours: 1);
+  // Must match Supabase -> Auth -> Email OTP Expiration (600 seconds).
+  static const Duration _codeLifetime = Duration(minutes: 10);
 
   final List<TextEditingController> _controllers = List.generate(
     _codeLength,
